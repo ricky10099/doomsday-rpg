@@ -1,353 +1,37 @@
-<!DOCTYPE html>
-<html lang="zh-HK">
-<head>
-    <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>末蝕紀元 v0.5 試玩版</title>
-    <style>
-        :root {
-            --bg-color: #050505; --panel-bg: #111; --text-color: #ccc;
-            --font-main: 'Segoe UI', 'Microsoft JhengHei', sans-serif;
-            --r-common: #b0b0b0; --r-rare: #55aaff; --r-epic: #aa55ff; --r-legend: #ffaa00; --r-heirloom: #e74c3c;
-            --hp-color: #ff5555; --san-color: #55aaff; --gain: #4f4; --loss: #f44;
-            --mbti-color: #00d9ff; --skill-color: #ffd700; --quest-color: #fa0;
-            --moral-high: #4f4; --moral-low: #f44; --luck-color: #ffd700;
-            --xp-color: #b5f;
-
-/* === 戰鬥介面極度昇華版 === */
-
-/* 1. 敵人面板：高科技戰術風格 */
-#enemy-area {
-    background: linear-gradient(180deg, #1a0505 0%, #000 100%);
-    border-bottom: 2px solid #f44;
-    padding: 15px;
-    position: relative;
-    overflow: hidden;
-
-    flex-shrink: 0;   /* 禁止此區域被壓縮，這能確保它永遠保持完整高度 */
-    z-index: 10;      /* 提高層級，確保它壓在日誌文字上方 */
-    box-shadow: 0 5px 20px rgba(0, 0, 0, 0.9); /* 加深陰影，視覺上區隔開來 */
-    min-height: 160px; /* 給予一個最小高度，避免被瞬間擠壓 */
-}
-
-/* 敵人頭像區 */
-.enemy-visual {
-    display: flex;
-    justify-content: center;
-    align-items: center;
-    margin-bottom: 10px;
-    height: 80px;
-}
-.enemy-avatar {
-    font-size: 4em;
-    filter: drop-shadow(0 0 10px rgba(255, 0, 0, 0.5));
-    animation: float 3s ease-in-out infinite;
-}
-
-/* 敵人數據條 */
-.enemy-hud {
-    display: flex;
-    flex-direction: column;
-    gap: 5px;
-}
-.hud-row {
-    display: flex;
-    justify-content: space-between;
-    align-items: center;
-    font-size: 0.9em;
-}
-
-/* 高級血條 */
-.hp-bar-container {
-    height: 16px;
-    background: #300;
-    border: 1px solid #600;
-    border-radius: 8px;
-    position: relative;
-    overflow: hidden;
-    box-shadow: inset 0 0 5px #000;
-}
-.hp-bar-fill {
-    height: 100%;
-    background: linear-gradient(90deg, #f22, #a00);
-    width: 100%;
-    transition: width 0.3s cubic-bezier(0.4, 0, 0.2, 1);
-    position: relative;
-}
-/* 血條光澤特效 */
-.hp-bar-fill::after {
-    content: '';
-    position: absolute;
-    top: 0; left: 0; right: 0; height: 50%;
-    background: rgba(255,255,255,0.2);
-}
-
-/* 狀態圖標 */
-.buff-row {
-    display: flex;
-    gap: 5px;
-    flex-wrap: wrap;
-    justify-content: center;
-    margin-top: 8px;
-}
-.buff-badge {
-    background: #222;
-    border: 1px solid #444;
-    padding: 2px 6px;
-    font-size: 0.75em;
-    border-radius: 4px;
-    display: flex;
-    align-items: center;
-    gap: 3px;
-}
-
-/* 動畫特效 */
-@keyframes float {
-    0%, 100% { transform: translateY(0); }
-    50% { transform: translateY(-10px); }
-}
-@keyframes shake {
-    0% { transform: translate(1px, 1px) rotate(0deg); }
-    10% { transform: translate(-1px, -2px) rotate(-1deg); }
-    20% { transform: translate(-3px, 0px) rotate(1deg); }
-    30% { transform: translate(3px, 2px) rotate(0deg); }
-    40% { transform: translate(1px, -1px) rotate(1deg); }
-    50% { transform: translate(-1px, 2px) rotate(-1deg); }
-    60% { transform: translate(-3px, 1px) rotate(0deg); }
-    70% { transform: translate(3px, 1px) rotate(-1deg); }
-    80% { transform: translate(-1px, -1px) rotate(1deg); }
-    90% { transform: translate(1px, 2px) rotate(0deg); }
-    100% { transform: translate(1px, -2px) rotate(-1deg); }
-}
-.shaking { animation: shake 0.5s; }
-
-.dmg-popup {
-    position: absolute;
-    top: 50%; left: 50%;
-    transform: translate(-50%, -50%);
-    color: #fff;
-    font-weight: bold;
-    font-size: 2em;
-    text-shadow: 0 0 10px #f00;
-    pointer-events: none;
-    animation: popUp 0.8s forwards;
-    z-index: 10;
-}
-@keyframes popUp {
-    0% { opacity: 1; transform: translate(-50%, -50%) scale(0.5); }
-    20% { transform: translate(-50%, -80%) scale(1.5); }
-    100% { opacity: 0; transform: translate(-50%, -150%) scale(1); }
-}
-
-/* 戰鬥日誌優化 */
-.log-combat-h { color: #aaa; border-left: 2px solid #555; padding-left: 8px; margin: 4px 0; font-size:0.9em; }
-.log-combat-d { color: #f66; font-weight: bold; }
-.log-combat-c { color: #fa0; font-weight: bold; font-size: 1.1em; text-shadow:0 0 5px #a50; }
-.log-combat-p { color: #4f4; }
-
-/* === 物品分類標籤樣式 === */
-.type-tag {
-    display: inline-block;
-    font-size: 0.75em;
-    padding: 1px 5px;
-    border-radius: 3px;
-    margin-right: 6px;
-    font-weight: normal;
-    vertical-align: middle;
-    border: 1px solid #444;
-    background: #222;
-    color: #aaa;
-}
-/* 不同類型的微調顏色 (可選) */
-.tag-melee { color: #f88; border-color: #633; }
-.tag-ranged { color: #8f8; border-color: #363; }
-.tag-def { color: #88f; border-color: #336; }
-.tag-con { color: #fa0; border-color: #640; }
-        }
-        body { background-color: var(--bg-color); color: var(--text-color); font-family: var(--font-main); margin: 0; padding: 5px; display: flex; justify-content: center; height: 100vh; overflow: hidden; user-select: none; }
-        #game-container {
-    width: 100%;
-    max-width: 950px;
-    display: flex;
-    flex-direction: column; /* 垂直排列 */
-    border: 1px solid #333;
-    background: var(--panel-bg);
-    box-shadow: 0 0 50px rgba(0,0,0,0.9);
-    border-radius: 5px;
-    position: relative;
-    
-    /* ★★★ 確保高度限制，讓內部滾動生效 ★★★ */
-    height: 100vh;    /* 佔滿視窗高度 */
-    max-height: 100vh;
-    overflow: hidden; /* 禁止整個遊戲框出現滾動條 */
-}
-        
-        #header { padding: 8px; background: #181818; border-bottom: 1px solid #333; display: grid; grid-template-columns: repeat(6, 1fr); gap: 4px; font-size: 0.8em; text-align: center; }
-        #weather-bar { background: #080808; color: #ddd; padding: 4px 15px; text-align: center; font-size: 0.85em; border-bottom: 1px solid #333; display: flex; justify-content: space-between; align-items: center; }
-        .stat-box { cursor: pointer; padding: 2px; border-radius: 4px; background:#0f0f0f; border:1px solid #222; transition:0.2s; }
-        .stat-box:hover { background: #222; border-color: #666; }
-        .stat-val { font-weight: bold; font-size: 1.1em; color: #fff; display:block; }
-        
-        #equip-bar { padding: 8px; background: #141414; border-bottom: 1px solid #333; display: grid; grid-template-columns: 1fr 1fr 1fr; gap: 8px; font-size: 0.8em; }
-        .eq-row { display: flex; flex-direction: column; justify-content: center; align-items: flex-start; background: #0a0a0a; padding: 6px 10px; border-radius: 4px; border: 1px solid #222; cursor: pointer; transition: 0.2s; min-height: 45px; position:relative; }
-        .eq-row:hover { border-color: #666; background: #1a1a1a; }
-        .eq-val { font-weight: bold; }
-        .mastery-tag { position: absolute; right: 5px; top: 5px; font-size: 0.7em; color: var(--skill-color); border: 1px solid var(--skill-color); padding: 1px 3px; border-radius: 3px; }
-
-        #log-area {
-    /* ★★★ 新增/修改的關鍵屬性 ★★★ */
-    flex-grow: 1;     /* 佔據剩餘空間 */
-    flex-shrink: 1;   /* 空間不足時允許縮小 */
-    min-height: 0;    /* Firefox/Chrome 的 Flexbox 滾動修復關鍵 */
-    
-    /* 原有樣式 */
-    padding: 15px;
-    overflow-y: auto; /* 讓文字在內部滾動 */
-    background-color: #080808;
-    font-family: 'Consolas', var(--font-main);
-    border-bottom: 1px solid #333;
-    line-height: 1.5;
-    font-size: 0.9em;
-    z-index: 1;       /* 層級低於敵人面板 */
-}
-
-        .log-entry { margin-bottom: 5px; padding-bottom: 4px; border-bottom: 1px solid #1a1a1a; animation: fadeIn 0.2s; }
-        .c-gain { color: var(--gain); } .c-loss { color: var(--loss); } .c-epic { color: var(--r-epic); } .c-skill { color: var(--skill-color); font-weight:bold; } .c-quest { color: var(--quest-color); font-weight:bold; } .c-story { color: #f0f; font-weight:bold; }
-        .c-xp { color: var(--xp-color); font-weight: bold; }
-
-        #action-area { padding: 10px; background: #1a1a1a; display: flex; flex-direction: column; gap: 8px; min-height: 280px; }
-        .btn-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(140px, 1fr)); gap: 8px; }
-        .combat-grid { display: grid; grid-template-columns: repeat(2, 1fr); gap: 10px; height:100%; }
-        .combat-full-width { grid-column: span 2; }
-        
-        button { background: #252525; color: #ccc; border: 1px solid #444; padding: 10px; cursor: pointer; transition: 0.1s; border-radius: 4px; position: relative; display: flex; flex-direction: column; justify-content: center; align-items: center; text-align: center; }
-        button:hover { background: #333; border-color: #fff; color: #fff; transform: translateY(-1px); }
-        button:disabled { opacity: 0.3; cursor: not-allowed; transform: none; filter: grayscale(100%); }
-        
-        .loc-btn { padding: 8px; min-height: 60px; border: 1px solid #333; background: #111; align-items: flex-start; text-align: left; width: 100%; }
-        .loc-name { font-weight: bold; font-size: 0.95em; color: #eee; margin-bottom: 4px; }
-        .loc-info { display: flex; justify-content: space-between; font-size: 0.75em; width: 100%; color: #888; }
-        .d-low { color:#4f4; } .d-mid { color:#fa0; } .d-high { color:#f44; } .d-dead { color:#d0f; font-weight:bold; }
-        .grid-3x3 { display: grid; grid-template-columns: repeat(3, 1fr); gap: 6px; height: 100%; flex-grow: 1; }
-
-        .overlay { position: absolute; top: 0; left: 0; right: 0; bottom: 0; background: rgba(0,0,0,0.96); z-index: 99; display: flex; flex-direction: column; align-items: center; justify-content: center; }
-        #modal-content { background: #111; border: 1px solid #444; padding: 20px; max-width: 95%; width: 650px; border-radius: 8px; text-align: center; max-height: 90vh; overflow-y: auto; box-shadow: 0 0 30px #000; }
-        
-        .comp-container { display: grid; grid-template-columns: 1fr 1fr; gap: 10px; margin-bottom: 15px; text-align: left; }
-        .comp-box { background: #080808; border: 1px solid #333; padding: 10px; border-radius: 4px; }
-        .diff-up { color: #4f4; font-weight: bold; } .diff-down { color: #f44; font-weight: bold; } .diff-eq { color: #555; }
-
-        .story-text { margin-bottom: 15px; line-height: 1.8; color: #ddd; font-size: 1.05em; text-align: left; background: #161616; padding: 15px; border-radius: 5px; border-left: 3px solid var(--r-legend); }
-        .main-story-text { border-left-color: #f44; font-size: 1.1em; color: #fff; box-shadow: 0 0 10px rgba(255,0,0,0.1); }
-
-        .q0 { color: var(--r-common); } .q1 { color: var(--r-rare); text-shadow:0 0 5px rgba(85,170,255,0.3); } .q2 { color: var(--r-epic); text-shadow:0 0 8px rgba(170,85,255,0.5); font-weight:bold; } .q3 { color: var(--r-legend); text-shadow:0 0 10px rgba(255,170,0,0.6); font-weight:bold; border-bottom:1px dashed var(--r-legend); } 
-        .c-mbti { color: var(--mbti-color); font-weight: bold; }
-        
-        #quest-btn { padding: 4px 10px; border: 1px solid var(--quest-color); color: var(--quest-color); background: #222; font-size: 0.9em; border-radius: 4px; cursor: pointer; transition:0.2s; }
-        #quest-btn:hover { background: #333; box-shadow: 0 0 10px var(--quest-color); }
-        
-        .opt-btn { text-align: left; padding: 12px; border-left: 3px solid #555; }
-        .opt-btn:hover { border-left-color: #fff; background: #2a2a2a; }
-
-        @keyframes fadeIn { from { opacity:0; transform:translateY(5px); } to { opacity:1; transform:translateY(0); } }
-        ::-webkit-scrollbar { width: 5px; } ::-webkit-scrollbar-thumb { background: #444; border-radius: 3px; }
-    </style>
-</head>
-<body>
-
-<div id="game-container">
-    <div id="weather-bar">
-        <span><span id="w-icon">☀️</span> <span id="w-text">晴朗</span></span>
-        <button id="quest-btn" onclick="showQuestDetail()">📜 任務資訊</button>
-        <span><span id="v-job" style="color:var(--r-rare)"></span> / <span id="v-mbti" class="c-mbti"></span> <span id="v-status-extra" style="color:#f44"></span></span>
-    </div>
-
-    <div id="header">
-        <div class="stat-box"><span class="stat-lbl">Day</span><span class="stat-val" id="v-day">0</span></div>
-        <div class="stat-box"><span class="stat-lbl">HP</span><span class="stat-val" style="color:var(--hp-color)"><span id="v-hp">100</span>/<span id="v-max-hp">100</span></span></div>
-        <div class="stat-box"><span class="stat-lbl">SAN</span><span class="stat-val" style="color:var(--san-color)" id="v-san">100</span></div>
-        <div class="stat-box" onclick="showStats()"><span class="stat-lbl">Lv. <span id="v-lvl" style="color:#fff">1</span></span><span class="stat-val" id="v-stats">屬性</span></div>
-        <div class="stat-box"><span class="stat-lbl">XP</span><span class="stat-val" id="v-xp" style="color:var(--xp-color)">0/20</span></div>
-        <div class="stat-box"><span class="stat-lbl">物資</span><span class="stat-val"><span id="v-food">100</span>/<span id="v-water">100</span></span>
-</div>
-<div class="stat-box"><span class="stat-lbl">💰 金錢</span><span class="stat-val" id="v-money" style="color:#ffd700">0</span></div>
-    </div>
-    
-    <div id="equip-bar">
-        <div class="eq-row" onclick="showItemDetail('melee')">
-            <span class="eq-label">⚔️ 近戰</span><span id="eq-melee" class="eq-val q0">(未裝備)</span>
-            <div id="tag-melee" class="mastery-tag" style="display:none">專精</div>
-        </div>
-        <div class="eq-row" onclick="showItemDetail('ranged')">
-            <span class="eq-label">🔫 遠程</span><span class="eq-val"><span id="eq-ranged" class="q0">(未裝備)</span> <span id="v-ammo" style="color:#666;font-size:0.8em;font-weight:normal">(0)</span></span>
-            <div id="tag-ranged" class="mastery-tag" style="display:none">專精</div>
-        </div>
-        <div class="eq-row" onclick="showItemDetail('head')"><span class="eq-label">🪖 頭部</span><span id="eq-head" class="eq-val q0">(未裝備)</span></div>
-        <div class="eq-row" onclick="showItemDetail('body')"><span class="eq-label">👕 身體</span><span id="eq-body" class="eq-val q0">(未裝備)</span></div>
-        <div class="eq-row" onclick="showItemDetail('acc')"><span class="eq-label">💍 飾品</span><span id="eq-acc" class="eq-val q0">(未裝備)</span></div>
-    </div>
-
-<!-- ★★★敵人專屬區域 ★★★ -->
-    <div id="enemy-area" style="display:none"></div>
-
-    <div id="log-area"></div>
-    <div id="action-area"></div>
-</div>
-
-<!-- Modal -->
-<div id="screen-modal" class="overlay" style="display:none" onclick="">
-    <div id="modal-content" onclick="event.stopPropagation()">
-        <h2 id="m-title" style="margin:0 0 10px 0; color:#fff"></h2>
-        <div id="m-desc" style="color:#ccc; line-height:1.6; font-size:0.95em"></div>
-        <div id="m-btns" style="margin-top:15px"></div>
-    </div>
-</div>
-
-<!-- Start Screens -->
-<div id="screen-start" class="overlay">
-    <h1 style="color:var(--r-legend); font-size: 2.5em; text-transform: uppercase; margin-bottom:10px; text-shadow: 0 0 20px rgba(255,170,0,0.5);">末蝕紀元 v50.3</h1>
-    <p style="color:#888; margin-bottom: 20px;">正式內容將會大幅更新</p>
-    <div style="display:flex; gap:10px;">
-        <button onclick="startGame(1)" style="width:120px;text-align:center">🟢 正常</button>
-        <button onclick="startGame(2)" style="width:120px;text-align:center;border-color:var(--r-rare)">🟡 困難</button>
-        <button onclick="startGame(3)" style="width:120px;text-align:center;border-color:var(--r-legend)">🔴 噩夢</button>
-    </div>
-</div>
-
-<div id="screen-jobs" class="overlay" style="display:none">
-    <h2 style="color:#ccc; margin-bottom:20px">Step 1: 選擇前世身份 (9/32)</h2>
-    <div id="job-container" class="btn-grid" style="width:90%; max-height:80vh; overflow-y:auto; display:grid; grid-template-columns: repeat(auto-fit, minmax(220px, 1fr));"></div>
-</div>
-
-<div id="screen-mbti" class="overlay" style="display:none">
-    <h2 style="color:#ccc; margin-bottom:20px">Step 2: 選擇人格特質</h2>
-    <div id="mbti-container" style="display:flex; gap:20px; flex-wrap:wrap; justify-content:center;"></div>
-</div>
-
-<script>
+// ==================== Data import ====================
 // ==================== 0. 基礎資料庫 ====================
-const STAT_MAP = { s:'力量', a:'敏捷', i:'智力', w:'意志', moral:'道德', luck:'幸運', loot:'掉寶', heal:'回血', san:'回SAN', hp:'生命', melee:'近戰武器', ranged:'遠程武器', acc:'飾品', med:'醫療', head:'頭盔', body:'護甲' };
+import MBTI_TYPES from './data/MBTI_TYPES.json' with  { type: "json" };
+// 共通裝備庫：5類 x 5 Tier x 10種 = 250種
+// 格式：[ [Tier1 items...], [Tier2 items...], ... ]
+// 共通裝備庫：5類裝備 + 2類消耗品
+import COMMON_DB from './data/COMMON_DB.json' with  { type: "json" };
+// ==================== 職業專屬裝備庫 (Tier 1 基礎值) ====================
+// 這些是各職業的「本命裝備」，只有該職業能找到。
+// 系統會根據天數自動為它們加上 Tier 前綴 (如 "精工 銀魂武士刀") 並大幅提升數值。
+import JOB_EXCLUSIVE_DB from './data/JOB_EXCLUSIVE_DB.json' with  { type: "json" };
+import ALL_JOBS from './data/ALL_JOBS.json' with  { type: "json" };
+import QUEST_DB from './data/QUEST_DB.json' with  { type: "json" };
+import LOCATIONS from './data/LOCATIONS.json' with  { type: "json" };
+import LOC_EVENT_DB from './data/LOCATIONS.json' with  { type: "json" };
 
-const MBTI_TYPES = [
-    { id:'INTJ', name:'建築師', bonus:{i:2,san:2}, desc:'深思熟慮，善於制定長遠計劃。' }, 
-    { id:'INTP', name:'邏輯學家', bonus:{i:3}, desc:'對知識有止境的渴望，分析力強。' }, 
-    { id:'ENTJ', name:'指揮官', bonus:{s:1,a:1,i:1}, desc:'大膽的領導者，能發現機會。' }, 
-    { id:'ENTP', name:'辯論家', bonus:{a:2,i:1}, desc:'聰明好奇，喜歡挑戰風險。' },
-    { id:'INFJ', name:'提倡者', bonus:{san:5}, desc:'安靜而神秘，但非常鼓舞人心。' }, 
-    { id:'INFP', name:'調停者', bonus:{heal:2}, desc:'詩意，善良的利他主義者。' }, 
-    { id:'ENFJ', name:'主人公', bonus:{loot:0.1}, desc:'富有魅力，能感召人心。' }, 
-    { id:'ENFP', name:'競選者', bonus:{loot:0.2}, desc:'熱情，有創造力，運氣好。' },
-    { id:'ISTJ', name:'物流師', bonus:{s:1,i:1}, desc:'注重事實，可靠的現實主義者。' }, 
-    { id:'ISFJ', name:'守衛者', bonus:{defP:0.1}, desc:'非常專注而溫暖的守護者。' }, 
-    { id:'ESTJ', name:'總經理', bonus:{s:2}, desc:'出色的管理者，力量驚人。' }, 
-    { id:'ESFJ', name:'執政官', bonus:{hp:20}, desc:'極度關懷他人，生命力強。' }, 
-    { id:'ISTP', name:'鑑賞家', bonus:{crit:5}, desc:'大膽而實際的實驗家。' }, 
-    { id:'ISFP', name:'探險家', bonus:{dodge:5}, desc:'靈活有魅力的藝術家。' }, 
-    { id:'ESTP', name:'企業家', bonus:{dmgP:0.1}, desc:'聰明，精力充沛，喜歡冒險。' }, 
-    { id:'ESFP', name:'表演者', bonus:{a:3}, desc:'精力充沛，敏捷過人。' }
-];
-
-// ==================== 0. 基礎資料庫 (重構) ====================
+const STAT_MAP = { 
+    s:'力量',
+    a:'敏捷',
+    i:'智力',
+    w:'意志',
+    moral:'道德',
+    luck:'幸運',
+    loot:'掉寶',
+    heal:'回血',
+    san:'回SAN',
+    hp:'生命',
+    melee:'近戰武器',
+    ranged:'遠程武器',
+    acc:'飾品',
+    med:'醫療',
+    head:'頭盔',
+    body:'護甲',
+};
 
 // 定義職業專屬裝備的 Tier 前綴與倍率
 const JOB_TIER_PREFIX = [
@@ -358,754 +42,11 @@ const JOB_TIER_PREFIX = [
     { p: "覺醒·", mul: 5.5 }          // T5: 120+ days
 ];
 
-// 共通裝備庫：5類 x 5 Tier x 10種 = 250種
-// 格式：[ [Tier1 items...], [Tier2 items...], ... ]
-// 共通裝備庫：5類裝備 + 2類消耗品
-const COMMON_DB = {
-    melee: [
-        // Tier 1 (Day 0-29)
-        [{n:'生鏽鐵管',v:3},{n:'折疊凳',v:4},{n:'碎玻璃瓶',v:2},{n:'木製棒球棍',v:5},{n:'美工刀',v:3},{n:'擀麵棍',v:3},{n:'斷裂的球桿',v:4},{n:'尖銳石頭',v:2},{n:'掃把柄',v:2},{n:'舊皮帶',v:1}],
-        // Tier 2 (Day 30-59)
-        [{n:'鋒利消防斧',v:15},{n:'加重鐵鎚',v:14},{n:'磨尖鐵撬',v:13},{n:'改裝水管',v:12},{n:'工業扳手',v:14},{n:'園藝大剪',v:13},{n:'螺絲起子矛',v:11},{n:'帶釘木棒',v:15},{n:'切肉大刀',v:16},{n:'露營手斧',v:14}],
-        // Tier 3 (Day 60-89)
-        [{n:'警用伸縮棍',v:30},{n:'戰術開山刀',v:35},{n:'精鋼武士刀',v:38},{n:'特種匕首',v:28},{n:'複合材料斧',v:32},{n:'防暴盾牌',v:25,defP:0.05},{n:'刺刀',v:29},{n:'騎士長劍(複製品)',v:34},{n:'雙截棍',v:30,a:5},{n:'三棱軍刺',v:36}],
-        // Tier 4 (Day 90-119)
-        [{n:'高頻震動刃',v:70},{n:'熱能切割斧',v:75},{n:'等離子光劍',v:80},{n:'液壓動力拳套',v:65,s:10},{n:'奈米絲線',v:72,crit:10},{n:'重力鎚',v:85,s:15},{n:'鐳射切割刀',v:78},{n:'磁暴長矛',v:76},{n:'音波震盪劍',v:74},{n:'分子裂解刀',v:90}],
-        // Tier 5 (Day 120+)
-        [{n:'反物質大劍',v:150},{n:'虛空之刃',v:145},{n:'中子星戰鎚',v:160},{n:'時間切斷者',v:155},{n:'維度撕裂爪',v:140},{n:'黑洞邊緣',v:158},{n:'諸神黃昏',v:165},{n:'因果律拳套',v:148},{n:'星光滅絕',v:152},{n:'創世之柱',v:170}]
-    ],
-    ranged: [
-        // Tier 1
-        [{n:'自製彈弓',v:3},{n:'整人水槍',v:1},{n:'裝滿石頭的襪子',v:2},{n:'過期胡椒粉',v:2},{n:'橡皮筋槍',v:1},{n:'飛鏢',v:4},{n:'玻璃珠',v:2},{n:'迴力鏢',v:3},{n:'網球發球機',v:5},{n:'小鞭炮',v:4}],
-        // Tier 2
-        [{n:'專業競技弓',v:18},{n:'改造釘槍',v:20},{n:'信號槍',v:15},{n:'自製弩',v:22},{n:'高壓氣槍',v:16},{n:'獵人吹箭',v:14},{n:'燃燒瓶',v:25},{n:'魚叉槍',v:21},{n:'強力彈弓',v:17},{n:'漆彈槍',v:12,desc:'致盲'}],
-        // Tier 3
-        [{n:'格洛克17',v:35},{n:'雷明登獵槍',v:45},{n:'MP5衝鋒槍',v:40},{n:'複合獵弓',v:38},{n:'沙漠之鷹',v:42},{n:'M4A1卡賓槍',v:44},{n:'麻醉槍',v:25,desc:'睡眠'},{n:'閃光震撼彈',v:20,desc:'暈眩'},{n:'戰術十字弓',v:46},{n:'雙管散彈槍',v:48}],
-        // Tier 4
-        [{n:'高斯步槍',v:80},{n:'電磁軌道炮(單兵)',v:95},{n:'激光加特林',v:85},{n:'微型導彈發射器',v:100},{n:'智能追蹤步槍',v:75,crit:20},{n:'音波加農炮',v:70,desc:'暈眩'},{n:'粒子狙擊槍',v:110},{n:'特斯拉電弧槍',v:78},{n:'重力波發射器',v:88},{n:'反坦克火箭',v:105}],
-        // Tier 5
-        [{n:'死星光束',v:160},{n:'二向箔發射器',v:180},{n:'黑洞手雷',v:170},{n:'反物質狙擊',v:200},{n:'量子糾纏槍',v:150},{n:'伽瑪射線暴',v:190},{n:'維度坍塌炮',v:175},{n:'神罰天基炮',v:210},{n:'虛空凝視',v:165},{n:'時間回溯槍',v:155}]
-    ],
-    head: [
-        // Tier 1
-        [{n:'報紙帽',v:1},{n:'破爛棒球帽',v:2},{n:'塑膠袋',v:0},{n:'耳機',v:1},{n:'泳帽',v:0},{n:'毛線帽',v:2},{n:'髮箍',v:0},{n:'太陽眼鏡',v:1},{n:'口罩',v:1},{n:'派對帽',v:0}],
-        // Tier 2
-        [{n:'工地安全帽',v:8},{n:'機車全罩盔',v:12},{n:'潛水面鏡',v:5},{n:'防毒面具',v:10},{n:'曲棍球面具',v:9},{n:'焊接面罩',v:11},{n:'軍用貝雷帽',v:4},{n:'礦工帽',v:7},{n:'消防頭盔',v:10},{n:'擊劍面罩',v:8}],
-        // Tier 3
-        [{n:'凱夫拉頭盔',v:20},{n:'戰術夜視鏡',v:15,a:5},{n:'防暴頭盔',v:22},{n:'特警面罩',v:24},{n:'二戰鋼盔',v:18},{n:'全覆式生化罩',v:16},{n:'防彈面具',v:25},{n:'戰術耳機',v:10,i:5},{n:'重型防護盔',v:28},{n:'狙擊手偽裝帽',v:12,dodge:5}],
-        // Tier 4
-        [{n:'納米戰鬥盔',v:45},{n:'外骨骼頭部單元',v:50},{n:'全息戰術目鏡',v:35,crit:10},{n:'靈能增幅冠',v:30,w:10},{n:'動力裝甲頭盔',v:55},{n:'能量力場發生器',v:40,defP:0.1},{n:'熱感應面罩',v:38},{n:'泰坦合金盔',v:60},{n:'神經連結頭環',v:32,i:15},{n:'虛空潛者面罩',v:42,dodge:10}],
-        // Tier 5
-        [{n:'神聖光環',v:100},{n:'虛空行者兜帽',v:90,dodge:20},{n:'星際陸戰隊頭盔',v:110},{n:'全知之眼',v:80,crit:25},{n:'不朽面具',v:120},{n:'龍神頭冠',v:105},{n:'量子運算頭盔',v:85,i:30},{n:'黑洞視界',v:95},{n:'絕對防禦力場',v:130},{n:'時間領主之冠',v:100}]
-    ],
-    body: [
-        // Tier 1
-        [{n:'破爛T恤',v:1},{n:'便利雨衣',v:1},{n:'睡衣',v:0},{n:'圍裙',v:2},{n:'運動外套',v:3},{n:'牛仔外套',v:4},{n:'羽絨服',v:3},{n:'西裝外套',v:2},{n:'校服',v:1},{n:'工作服',v:3}],
-        // Tier 2
-        [{n:'機車皮衣',v:12},{n:'防刺背心',v:15},{n:'加厚大衣',v:10},{n:'保安制服',v:8},{n:'潛水衣',v:9},{n:'美式足球護具',v:14},{n:'鎖子甲(仿)',v:13},{n:'消防服',v:12},{n:'實驗室白袍',v:5,i:2},{n:'連身技工服',v:11}],
-        // Tier 3
-        [{n:'輕型防彈衣',v:30},{n:'戰術背心',v:35},{n:'重型防彈衣',v:45},{n:'特警護甲',v:40},{n:'陶瓷插板背心',v:48},{n:'防爆服',v:55,a:-5},{n:'生化防護服',v:25,hp:20},{n:'龍鱗甲(現代)',v:50},{n:'戰鬥工兵裝',v:38},{n:'迷彩戰術服',v:32,dodge:5}],
-        // Tier 4
-        [{n:'外骨骼裝甲',v:80,s:5},{n:'納米纖維服',v:70,a:10},{n:'動力裝甲軀幹',v:100},{n:'光學迷彩服',v:60,dodge:15},{n:'反應式裝甲',v:90},{n:'能量護盾發生器',v:75,defP:0.15},{n:'泰坦合金甲',v:110},{n:'液態金屬戰衣',v:85},{n:'重力抵消服',v:65,a:15},{n:'輻射動力裝甲',v:105}],
-        // Tier 5
-        [{n:'神之鎧甲',v:200},{n:'虛空編織者',v:180},{n:'星雲戰衣',v:170},{n:'反物質屏障',v:190,defP:0.3},{n:'量子相位裝甲',v:160,dodge:30},{n:'黑洞奇點服',v:210},{n:'不滅金身',v:250},{n:'時間流逝法袍',v:150,i:20},{n:'維度守護者',v:220},{n:'創世戰甲',v:230}]
-    ],
-    acc: [
-        // Tier 1
-        [{n:'塑膠手環',v:1},{n:'便宜手錶',v:1},{n:'鑰匙圈',v:0},{n:'護身符',v:2},{n:'OK繃',v:1},{n:'髮夾',v:0},{n:'幸運繩',v:3,luck:1},{n:'玻璃珠項鍊',v:1},{n:'口罩',v:1},{n:'貼紙',v:0}],
-        // Tier 2
-        [{n:'多功能工具鉗',v:5,i:2},{n:'急救包',v:5,heal:5},{n:'指南針',v:5,luck:2},{n:'戰術手電筒',v:8},{n:'皮手套',v:4},{n:'防風鏡',v:3},{n:'登山扣',v:2},{n:'保溫水壺',v:5},{n:'求生手環',v:4},{n:'望遠鏡',v:6,a:2}],
-        // Tier 3
-        [{n:'戰術手套',v:15,s:2},{n:'夜視鏡',v:20,a:3},{n:'軍用通訊器',v:10,i:5},{n:'急救醫療箱',v:12,heal:10},{n:'彈藥帶',v:10},{n:'戰術腰帶',v:14},{n:'防毒濾罐',v:15},{n:'紅點瞄準鏡',v:18,crit:5},{n:'工兵鏟',v:15},{n:'幸運金幣',v:10,luck:5}],
-        // Tier 4
-        [{n:'腎上腺素注射器',v:30,hp:50},{n:'外骨骼機械臂',v:40,s:10},{n:'熱成像儀',v:35,crit:10},{n:'能量護盾電池',v:38,defP:0.1},{n:'神經加速晶片',v:32,a:10},{n:'全息地圖儀',v:25,i:10},{n:'納米修復機器人',v:28,heal:20},{n:'重力靴',v:30},{n:'相位轉移裝置',v:34,dodge:10},{n:'戰術AI核心',v:36,i:15}],
-        // Tier 5
-        [{n:'無限寶石(贗品)',v:60,all:5},{n:'時間寶石',v:50,dodge:20},{n:'空間跳躍裝置',v:55},{n:'永動機核心',v:65,hp:100},{n:'全知晶片',v:70,crit:25},{n:'神之血清',v:58,s:20},{n:'虛空心臟',v:62,w:20},{n:'幸運女神的內衣',v:10,luck:50},{n:'因果逆轉器',v:75},{n:'奇點發生器',v:80}]
-    ],
-    med: [
-        // Tier 1
-        [{n:'過期創可貼',v:2,hp:5,desc:'聊勝於無'},{n:'阿嬤的涼茶',v:5,san:5,desc:'安神'},{n:'生理食鹽水',v:5,hp:8,desc:'清洗傷口'},{n:'止痛藥片',v:8,hp:10,san:2},{n:'薄荷膏',v:3,san:3,desc:'提神'},{n:'維生素C',v:5,hp:5,desc:'增強免疫'},{n:'跌打酒',v:10,hp:12,desc:'活血'},{n:'潤喉糖',v:2,san:2},{n:'雙氧水',v:6,hp:8,eff:'bleed'},{n:'暖暖包',v:5,hp:5,desc:'保暖'}],
-        // Tier 2
-        [{n:'抗生素',v:20,hp:25,eff:'poison'},{n:'強力繃帶',v:15,hp:20,eff:'bleed'},{n:'布洛芬',v:18,hp:15,san:5},{n:'燒傷噴霧',v:25,hp:10,eff:'burn'},{n:'葡萄糖液',v:15,hp:30},{n:'安眠藥',v:20,san:15,desc:'強行鎮靜'},{n:'抗過敏藥',v:18,hp:10,eff:'poison'},{n:'雲南白藥',v:30,hp:35,eff:'bleed'},{n:'腎上腺素筆(民用)',v:40,hp:20,s:2},{n:'碘伏棉球',v:12,hp:15}],
-        // Tier 3
-        [{n:'軍用急救包',v:60,hp:60,eff:'bleed'},{n:'嗎啡',v:80,hp:30,san:20},{n:'凝血劑',v:50,hp:40,eff:'bleed'},{n:'抗輻射藥',v:100,san:10,desc:'清除輻射'},{n:'強效類固醇',v:70,hp:20,s:5},{n:'血漿袋',v:65,hp:80},{n:'手術縫合針',v:45,hp:50,eff:'bleed'},{n:'鎮定劑注射',v:55,san:30},{n:'抗毒血清',v:90,hp:30,eff:'poison'},{n:'戰地興奮劑',v:85,hp:40,a:5}],
-        // Tier 4
-        [{n:'納米修復針',v:150,hp:120,eff:'bleed'},{n:'幹細胞噴霧',v:130,hp:100,eff:'burn'},{n:'基因穩定劑',v:200,san:50},{n:'合成血液',v:140,hp:150},{n:'神經接駁劑',v:180,san:20,i:10},{n:'強心針',v:160,hp:50,desc:'瀕死救回'},{n:'骨骼生長素',v:150,hp:80,desc:'接骨'},{n:'痛覺阻斷劑',v:120,hp:60,w:10},{n:'生物凝膠',v:140,hp:110,eff:'burn'},{n:'超級抗生素',v:170,hp:90,eff:'poison'}],
-        // Tier 5
-        [{n:'鳳凰之淚',v:500,hp:500,eff:'all'},{n:'萬靈藥(Elixir)',v:450,hp:999,san:100},{n:'仙豆',v:400,hp:999},{n:'世界樹露水',v:350,san:100,hp:200},{n:'虛空精華',v:380,hp:300,all:5},{n:'時間回溯藥劑',v:420,hp:999,eff:'all'},{n:'賢者之石碎片',v:550,san:999},{n:'女神的祝福',v:480,hp:600,desc:'持續回血'},{n:'永生原液',v:600,hp:800,s:20},{n:'奇點注射液',v:520,hp:500,eff:'all'}]
-    ],
-    throwable: [
-        // Tier 1
-        [{n:'小石子',v:2,eff:'stun'},{n:'紅磚頭',v:8,eff:'stun'},{n:'沙子',v:0,eff:'blind'},{n:'熱咖啡',v:3,eff:'burn'},{n:'玻璃瓶',v:5,eff:'bleed'},{n:'臭雞蛋',v:1,eff:'poison'},{n:'棒球',v:4},{n:'網球',v:2},{n:'一袋垃圾',v:1,eff:'poison'},{n:'雪球',v:1},{n:'硬皮書',v:5},{n:'花盆',v:6},{n:'高跟鞋',v:7},{n:'生鏽飛刀',v:10,eff:'bleed'},{n:'電池',v:3},{n:'肥皂',v:1,eff:'slow'},{n:'粉筆灰',v:0,eff:'blind'},{n:'手機',v:4},{n:'罐頭',v:5},{n:'迴紋針雨',v:3}],
-        // Tier 2
-        [{n:'燃燒瓶',v:25,eff:'burn'},{n:'強酸瓶',v:30,eff:'burn'},{n:'胡椒噴霧',v:5,eff:'blind'},{n:'自製釘刺球',v:20,eff:'bleed'},{n:'飛斧',v:35,eff:'bleed'},{n:'煙火',v:10,eff:'blind'},{n:'乾冰炸彈',v:15,eff:'slow'},{n:'磨尖螺絲刀',v:18,eff:'bleed'},{n:'保齡球',v:40,eff:'stun'},{n:'油漆桶',v:5,eff:'blind'},{n:'捕獸夾',v:25,eff:'slow'},{n:'毒老鼠藥',v:8,eff:'poison'},{n:'石灰粉',v:0,eff:'blind'},{n:'鏈球',v:35},{n:'飛鏢',v:12},{n:'忍者釘',v:10,eff:'slow'},{n:'汽油桶',v:45,eff:'burn'},{n:'電擊球',v:15,eff:'stun'},{n:'強力膠囊',v:0,eff:'slow'},{n:'碎玻璃雨',v:20,eff:'bleed'}],
-        // Tier 3
-        [{n:'M67手榴彈',v:80},{n:'閃光彈',v:5,eff:'blind'},{n:'震爆彈',v:15,eff:'stun'},{n:'煙霧彈',v:0,eff:'blind'},{n:'催淚瓦斯',v:10,eff:'poison'},{n:'戰術飛刀',v:50,eff:'bleed'},{n:'鋁熱劑手雷',v:70,eff:'burn'},{n:'C4炸藥包',v:120},{n:'EMP手雷',v:20,desc:'破盾'},{n:'神經毒氣罐',v:40,eff:'poison'},{n:'闊刀地雷',v:100},{n:'黏性炸彈',v:90},{n:'手裡劍',v:30,eff:'bleed'},{n:'軍用飛斧',v:60},{n:'液氮罐',v:30,eff:'slow'},{n:'白磷彈',v:85,eff:'burn'},{n:'標槍',v:75,eff:'bleed'},{n:'震撼音波球',v:25,eff:'stun'},{n:'震撼錘',v:55,eff:'stun'},{n:'燃燒手雷',v:65,eff:'burn'}],
-        // Tier 4
-        [{n:'等離子手雷',v:150,eff:'burn'},{n:'重力塌陷球',v:100,eff:'slow'},{n:'微型黑洞雷',v:200},{n:'納米蟲群罐',v:80,eff:'poison'},{n:'冷凍射線球',v:90,eff:'slow'},{n:'追蹤飛盤',v:120},{n:'磁暴手雷',v:110,eff:'stun'},{n:'光子閃光球',v:30,eff:'blind'},{n:'反物質炸彈',v:250},{n:'時空停滯雷',v:0,eff:'stun'},{n:'量子糾纏球',v:130},{n:'奇點發生器',v:220},{n:'聲波毀滅者',v:100,eff:'stun'},{n:'腐蝕孢子雷',v:90,eff:'poison'},{n:'雷射切割網',v:140,eff:'bleed'},{n:'全息誘餌',v:0,desc:'嘲諷'},{n:'智能迴旋鏢',v:115},{n:'引力波炸彈',v:180},{n:'聚變電池',v:160,eff:'burn'},{n:'虛空碎片',v:190}],
-        // Tier 5
-        [{n:'微縮超新星',v:500,eff:'burn'},{n:'維度撕裂者',v:600,eff:'bleed'},{n:'因果律武器',v:999},{n:'熵增炸彈',v:450,eff:'poison'},{n:'時間終結球',v:550,eff:'stun'},{n:'黑洞視界',v:800},{n:'絕對零度方塊',v:400,eff:'slow'},{n:'真空衰變雷',v:900},{n:'神罰之矛',v:750},{n:'靈魂收割鐮',v:650,eff:'kill'},{n:'宇宙重啟按鈕',v:1000},{n:'暗物質噴射器',v:700},{n:'恆星高溫瓶',v:580,eff:'burn'},{n:'反生命方程式',v:888,eff:'stun'},{n:'降維打擊箔',v:950},{n:'虛空吞噬者',v:720},{n:'創世光球',v:680,eff:'blind'},{n:'末日病毒',v:520,eff:'poison'},{n:'時空悖論',v:777},{n:'GM的橡皮擦',v:9999}]
-    ]
-};
-
-	// ==================== 職業專屬裝備庫 (Tier 1 基礎值) ====================
-// 這些是各職業的「本命裝備」，只有該職業能找到。
-// 系統會根據天數自動為它們加上 Tier 前綴 (如 "精工 銀魂武士刀") 並大幅提升數值。
-
-const JOB_EXCLUSIVE_DB = {
-    melee: [
-        // 修正：部分近戰武器數值微調
-        {n:'銀魂武士刀(仿製)',v:5, i:5, desc:'雖然是木頭但很帥'}, 
-        {n:'鍵盤',v:6, a:3, desc:'物理攻擊'}, 
-        {n:'繃帶',v:2, heal:5, desc:'纏繞止血'}, // v:1 -> v:2
-        {n:'扳手',v:12, s:2, desc:'維修兼敲人'}, 
-        {n:'高爾夫球桿',v:8, crit:15, desc:'有錢人的揮桿'}, 
-        {n:'竹子',v:5, a:5, desc:'輕便'}, 
-        {n:'紅磚頭',v:16, s:4, desc:'簡單粗暴'}, 
-        {n:'園藝鏟',v:9, s:1}, 
-        {n:'教鞭',v:4, w:5, desc:'痛在心裡'}, 
-        {n:'RAM切割刀',v:10, crit:20}, 
-        {n:'啞鈴',v:18, s:5, a:-2, desc:'沉重一擊'}, 
-        {n:'鈦金屬鉸剪',v:8, crit:25}, 
-        {n:'三角尺',v:5, i:10, desc:'計算角度'}, 
-        {n:'鑽石拳套',v:14, loot:2.0, desc:'每一拳都是錢'}, 
-        {n:'F1賽車方向盤',v:7, a:5}, 
-        {n:'金飯碗',v:8, hp:30}, 
-        {n:'十字架',v:4, san:15}, 
-        {n:'桃木劍',v:9, i:5}
-    ],
-    ranged: [
-        // 修正：BB彈槍 v:1 保留，因為它靠閃避，數值低是特色
-        {n:'撲克牌',v:3, luck:20, loot:0.3}, 
-        {n:'單反相機',v:5, dodge:10},
-        {n:'黑圍棋',v:6, i:5}, 
-        {n:'鎢鋼飛鏢',v:10, crit:15}, 
-        {n:'陀錶',v:2, w:10, desc:'催眠'}, 
-        {n:'電擊槍',v:8, i:3, desc:'科技制裁'}, 
-        {n:'BB彈槍',v:1, dodge:20, desc:'打不痛'}, 
-        {n:'Diji戰術飛行器',v:12, i:8}, 
-        {n:'火槍',v:15, s:2}, 
-        {n:'雷明登散彈槍',v:22, s:3}, 
-        {n:'手槍',v:14, a:3}, 
-        {n:'GEM麥克風',v:10, w:5}
-    ],
-    head: [
-        // 修正：Anonymous面具 v:0 -> v:2 (稍微給點防禦)
-        {n:'Anonymous面具',v:2, dodge:15, i:5}, 
-        {n:'燒焊面罩',v:6, defP:0.1}, 
-        {n:'法拉利車隊鴨舌帽',v:2, a:5}
-    ],
-    body: [
-        // 修正：肌肉護甲和小學生校服 v:0 -> v:1 (至少有一點點基礎防禦)
-        {n:'奇裝異服', v:2, i:5, san:5, desc:'防禦低但精神高'}, // v:1 -> v:2
-        {n:'ROG T-shirt', v:2, a:5, i:3}, 
-        {n:'護士袍', v:3, heal:10, desc:'回血特化'}, 
-        {n:'荷官西裝', v:3, loot:0.5, luck:10, desc:'掉寶特化'}, 
-        {n:'定製西裝', v:4, hp:50, desc:'血量(金錢)特化'}, 
-        {n:'熊貓玩偶服', v:6, hp:30, dodge:-5, desc:'厚實但笨重'},
-        {n:'龍友背包', v:2, i:3, loot:0.1}, 
-        {n:'李世石的外套', v:3, i:8}, 
-        {n:'教師服', v:3, w:8}, 
-        {n:'港隊隊服', v:4, a:8}, 
-        {n:'醫生袍', v:3, i:5, heal:5}, 
-        {n:'巴黎世家外套', v:4, loot:0.8, desc:'極高掉寶'}, 
-        {n:'小學生校服', v:1, dodge:25, desc:'目標小難打中'}, // v:0 -> v:1
-        {n:'低調名牌西裝', v:4, loot:0.3}, 
-        {n:'法拉利車隊服', v:5, a:10}, 
-        {n:'廚師袍', v:4, hp:40}, 
-        {n:'牧師袍', v:3, san:10}, 
-        {n:'天師袍', v:5, san:15, i:5}, 
-        {n:'Boogaloo西裝', v:3, a:8}, 
-        {n:'Three Man Down T-Shirt', v:2, hp:30},
-        {n:'樹木甲', v:6, hp:20, desc:'植物韌性'}, 
-        {n:'主板護甲', v:5, i:5, desc:'電路板拼湊'}, 
-        {n:'肌肉護甲', v:1, s:10, desc:'最好的防禦是肌肉'}, // v:0 -> v:1
-        {n:'法拉第籠', v:4, desc:'反傷10%'}, 
-        {n:'機械護甲', v:14, s:2, a:-2, desc:'厚重金屬'}, 
-        {n:'富豪防彈衣', v:15, desc:'凱夫拉纖維'}, 
-        {n:'防彈衣', v:16, desc:'警用標準'}, 
-    ],
-    acc: [
-        // ★★★ 重點修正區：將所有 v:0 改為合理數值 ★★★
-        // 這樣在介面上才不會顯示「強度: 0」
-        {n:'動漫節入場券',v:3, san:10}, 
-        {n:'Faker簽名照',v:5, a:5, i:5}, 
-        {n:'防毒面具',v:3, hp:10, w:5}, 
-        {n:'洗米華的戒指',v:5, loot:0.5, luck:5}, 
-        {n:'雪藏機械炒飯',v:5, hp:50}, 
-        {n:'勞斯萊斯雨傘',v:6, defP:0.1, w:5}, 
-        {n:'外送箱',v:4, loot:0.2, hp:20}, 
-        {n:'Sony鏡頭全套',v:6, i:10}, 
-        {n:'染血棋盤',v:4, w:8}, 
-        {n:'日本種子',v:3, heal:5, luck:5}, 
-        {n:'計算機',v:3, i:5}, 
-        {n:'論語',v:4, w:15}, 
-        {n:'RTX 5090',v:10, i:20, desc:'運算核心'}, // 顯卡很有價值，v 給高點
-        {n:'迷信平安符',v:3, luck:15}, 
-        {n:'健身奶粉',v:4, s:8, hp:20}, 
-        {n:'安眠藥',v:2, san:5, w:-2}, 
-        {n:'染髮劑',v:2, loot:0.1}, 
-        {n:'Elon Musk自傳',v:5, i:8}, // 修正：給予基礎值 5
-        {n:'如意算盤',v:4, i:5, luck:5}, 
-        {n:'薯片套裝',v:2, hp:30, san:5}, 
-        {n:'AE黑卡',v:10, loot:1.0, luck:10, desc:'鈔能力'}, // 黑卡價值高
-        {n:'大哥大',v:4, s:3}, 
-        {n:'奧蘇利雲之桿',v:5, a:5}, 
-        {n:'King James Bible',v:5, san:20}, 
-        {n:'八卦鏡',v:4, i:5, w:5}, 
-        {n:'冷凍蒸魚飯',v:3, hp:40}, 
-        {n:'胡椒噴霧',v:3, a:3, desc:'防身'}, 
-        {n:'雷鬼頭',v:3, a:5}, 
-        {n:'演唱會VIP門票',v:4, san:15}, 
-        {n:'ROG青軸鍵盤',v:4, a:3}
-    ]
-};
-
-const ALL_JOBS = [
-    {n:'Cosplayer (Lag)', s:{s:4,a:6,i:8,w:5}, back:'阿樂（Lag）二十三歲，是全港最紅的銀魂coser。兩年前他還是個普通大學生，只因為一次漫展臨時頂替朋友cos坂田銀時爆紅，從此一發不可收拾。所有兼職錢都拿去訂製道具，連木刀都找日本師傅1:1還原。媽媽罵他「中二病晚期」，他只笑笑。每次穿上那件破爛白色道服站在主舞台，萬人閃光燈下，他真的相信自己能拔刀斬斷一切。那天漫展，他排了四小時隊終於抽到壓軸。後台最後一次對鏡擺出「甜點心魂」姿勢，鏡子裡的少年笑得燦爛。幾分鐘後，日蝕降臨，觀眾席傳來第一聲慘叫。他握緊那把從來只用來擺pose的木刀，第一次聽見自己心跳比BGM還響。', g:['銀魂武士刀(仿製)','無','無','奇裝異服','動漫節入場券'], trait:'玻璃大炮', desc:'高智商，武器易損壞。', m:'melee', sk:'chuunibyou', masteryItem:'動漫節入場券', passive:'weapon_break'},
-
-    {n:'電競選手 (MikelyGG)', s:{s:3,a:10,i:6,w:5}, back:'阿Mike十九歲，S9世界賽四強AD，LOL前職業選手。十七歲瞞著家長退學簽約，父母氣得斷絕關係。巔峰時期一個人住在韓國訓練基地，日練十六小時，手指磨到起繭。退役後回港開直播，百萬粉絲，卻總覺得空虛。那天晚上剛打完rank，他準備去7-11買宵夜。推開玻璃門那一刻，整個世界突然漆黑，街燈、霓虹、手機螢幕同時熄滅。下一秒，第一隻喪屍撲來。他下意識一個走位閃開——像無數次在峽谷閃掉致命技能那樣。低頭一看，螢幕保護貼上Faker還在對他笑。他把手機塞進口袋，第一次覺得：原來現實裡，也能靠反應活下去。', g:['鍵盤','無','無','ROG T-shirt','Faker簽名照'], trait:'神經反射', desc:'極高反應速度。', m:'melee', sk:'snipe', masteryItem:'Faker簽名照', passive:'high_reflex'},
-
-    {n:'男護士 (Oscar)', s:{s:6,a:5,i:7,w:6}, back:'Oscar在瑪麗醫院急症室做了六年男護士，三十歲生日那天值夜班。一個十六歲車禍少年被推進來，全身血肉模糊，他連續搶救四小時，最後還是宣佈死亡。那晚他躲在茶水間哭到崩潰，從此把「不放棄」刻進骨子裡。口袋永遠塞滿繃帶，護士袍乾淨得過分。末日那天，他正幫一位末期癌癥老人換點滴，老人用最後力氣抓住他的手說：「Oscar，謝謝你讓我走得有尊嚴。」老人閉眼那一刻，日蝕降臨。窗外爆炸聲響起，老人屍體突然暴起咬向他脖子。Oscar深呼吸，把白布蓋好老人，轉身面對衝進來的屍群。這一次，他不會再讓任何人死在他面前。', g:['繃帶','無','無','護士袍','防毒面具'], trait:'南丁格爾', desc:'天生高血量，每回合回血。', m:'melee', sk:'first_aid', masteryItem:'防毒面具', passive:'nurse_buff'},
-
-    {n:'賭場荷官 (HNC)', s:{s:8,a:3,i:7,w:6}, back:'HNC在永利做了八年荷官，真名早已沒人記得。二十五歲就成為最年輕的籌碼桌主管，記得住每張牌的順序，也記得住每位賭客的命運。曾有富二代一晚輸三千萬想自殺，被他一手飛牌打掉手槍，從此圈內傳說「HNC的手比監控還準」。他從不賭博，卻比誰都懂運氣。末日那天他正發最後一局百家樂，燈光突然全滅，慘叫聲四起。他淡定地把半副牌插進西裝內袋，站起身，對滿桌已變成怪物的客人微笑：「先生們，這局我通殺。」然後把撲克牌像暗器一樣撒出去，第一排屍體瞬間倒下。', g:['無','撲克牌','無','荷官西裝','洗米華的戒指'], trait:'莊家', desc:'全屬性高，但閃避減半。', m:'ranged', sk:'fate_throw', masteryItem:'洗米華的戒指', passive:'dealer_luck'},
-
-    {n:'機械師 (Hoto)', s:{s:5,a:7,i:9,w:4}, back:'Hoto在觀塘工業區開一間小車房，老闆兼唯一員工。三十歲前他讀完機械工程博士，卻嫌朝九晚五太無聊，辭職修車。他能把報廢豐田改成燒電怪獸，也能用廢料焊會走路的機械狗送給街邊小朋友。那天他正幫一架舊Supra換渦輪，收音機插播緊急新聞。他抬頭看天，日蝕像墨汁一樣暈開。旁邊工廠突然爆炸，火光中他看見自己焊的機械狗突然自己啟動，撲向衝來的喪屍。他愣了半秒，抓起扳手狂笑：「原來你真係打得！」然後衝出去跟自己的作品並肩作戰。', g:['扳手','無','無','機械護甲','雪藏機械炒飯'], trait:'賭徒工程師', desc:'隨機召喚機械夥伴。', m:'melee', sk:'weakness_scan', masteryItem:'雪藏機械炒飯', passive:'eng_summon'},
-
-    {n:'iBanker (Lew)', s:{s:5,a:5,i:9,w:6}, back:'Lew在中環IFC六十八樓做投資銀行副總裁，二十九歲，年薪八位數，每天只睡三小時。母親問他賺錢給誰花，他總說「再拼幾年就退休」。末日那天，他正在跟倫敦開二十億併購電話會議。窗外突然暗下來，他以為停電，下一秒整棟大樓玻璃被屍群嘶吼震碎。他冷靜掛掉電話，從傘架抽出高爾夫球桿，對衝進來的怪物說：「Sorry，deal cancelled.」然後一個完美揮杆，把第一顆頭顱打進電梯井。從那天起，他再也不用擔心燒錢，只需要擔心活著。', g:['高爾夫球桿','無','無','定製西裝','勞斯萊斯雨傘'], trait:'華爾街之狼', desc:'每回合隨機回血或吸血。', m:'melee', sk:'risk_manage', masteryItem:'勞斯萊斯雨傘', passive:'olive_eat'},
-
-    {n:'外送員 (SSW)', s:{s:4,a:10,i:6,w:4}, back:'SSW是foodpanda香港區連續三年單王，月單破萬五。改裝電動車能飆180km/h，颱風天也在送，因為「遲到一秒都對不起客人」。末日那天他送最後一單燒賣到深水埗，客人開門時脖子被咬斷，血噴了他一身。他沒尖叫，只把燒賣塞進保溫層，然後騎車狂飆。當發現所有道路塞滿屍群，他第一次違反交通規則，騎上行人天橋。風聲呼嘯，他大喊：「我從來沒遲到過，今天也不會！」然後把車飛越欄杆，衝進屍群縫隙，繼續他的「最後一單」。', g:['竹子','無','無','熊貓玩偶服','外送箱'], trait:'外送傳說', desc:'極高逃跑率。', m:'melee', sk:'kungfu_panda', masteryItem:'外送箱', passive:'super_run'},
-
-    {n:'攝影師 (KenZo)', s:{s:6,a:7,i:6,w:5}, back:'KenZo是國家地理香港區特約攝影師，三十五歲，拿過無數國際獎。那張閃電劈中維港的照片賣了七位數。末日那天，他為拍日蝕凌晨三點帶全套Sony裝備爬上獅子山。當紅色日蝕真正出現，他興奮得發抖，按下快門那一刻，第一隻喪屍撲來，被閃光燈直射眼睛慘叫著掉下山崖。他看著相機裡永恆定格的紅色日蝕，低聲說：「這將是我這輩子最偉大的作品。」然後扛起相機，像扛槍一樣衝向下一道光。', g:['無','單反相機','無','龍友背包','Sony鏡頭全套'], trait:'閃光燈', desc:'攻擊機率致盲敵人。', m:'ranged', sk:'flash_bang', masteryItem:'Sony鏡頭全套', passive:'flash_blind'},
-
-    {n:'圍村村霸 (Kenboy)', s:{s:12,a:9,i:6,w:7}, back:'Kenboy四十歲，元朗圍村土生土長的村霸，從小到大沒人敢惹。二十歲已是村裡話事人，村裡每個人都怕他，也敬他——因為他從不欺負自己人。末日那天他正在村口打麻將，贏了三圈準備收台，天突然黑得像倒了墨。第一隻喪屍衝進村，他抄起桌上的紅磚就砸爆對方頭。血濺滿白背心，他看著驚慌的長輩和小朋友，吐了口痰：「我話過，這條村我罩，從前係，現在都係。」然後把磚頭塞進褲頭，帶著村民開始築牆。', g:['紅磚頭','無','無','無','無'], trait:'抑鬱霸王', desc:'高屬性但每日機率抑鬱。', m:'melee', sk:'rage', masteryItem:'紅磚頭', passive:'depress_stat'},
-
-    {n:'圍棋棋士 (BertJai)', s:{s:4,a:5,i:12,w:9}, back:'BertJai九歲學圍棋，十八歲定職業初段，二十五歲成為香港最年輕九段。棋院說他冷血，因為對局從不笑。末日那天，他正在跟韓國棋手網戰，黑棋剛下出「染血棋盤」般的絕殺，突然停電。第一隻喪屍衝進棋院，他側身讓過，用棋子盒邊緣精準敲碎對方太陽穴——像點目一樣乾淨。他淡定拿起李世石送的外套穿上，走出棋院，抬頭看紅色天空，低聲說：「這一局，黑先。」', g:['無','黑圍棋','無','李世石的外套','染血棋盤'], trait:'大局觀', desc:'格擋並反擊。', m:'ranged', sk:'god_hand', masteryItem:'染血棋盤', passive:'counter_block'},
-
-    {n:'園藝師 (Pat)', s:{s:6,a:6,i:7,w:7}, back:'Pat在天台種了十年植物，陽台被改造成熱帶雨林，連蕃茄樹都兩米高。街坊笑他傻，他說：「植物不會背叛我。」末日那天，他正給最心愛的豬籠草餵蟲，突然樓下傳來尖叫。他探頭看，整條街的人都在變成怪物。他二話不說把園藝鏟插進後腰，抱起從日本帶回的珍貴種子，爬上天台最高處。看著紅色日蝕把天空染成血色，他輕聲對植物說：「別怕，我哋一齊活下去。」然後把種子緊緊抱在胸前，像抱著最後的希望。', g:['園藝鏟','無','無','樹木甲','日本種子'], trait:'How dare you!', desc:'攻擊使敵人膽怯。', m:'melee', sk:'tree_strike', masteryItem:'日本種子', passive:'dare_you'},
-
-    {n:'精算師 (行健)', s:{s:4,a:5,i:11,w:6}, back:'行健在友邦做精算師，三十歲，已被評為亞太區最年輕首席精算師。他眼裡的一切都是數字，連談戀愛都要算回報率。末日那天，他在公司頂樓抽煙看日蝕，突然整棟大樓停電，同事們尖叫著變成怪物。他冷靜地拿出計算機，按了幾下，然後把煙蒂丟在地上踩滅：「死亡率100%，生存率0.0001%，可接受。」接著把計算機塞進口袋，開始計算怎麼用最少步數到達安全出口——從那天起，他把整個香港當成一張巨大的保單，而他，是唯一的承保人。', g:['無','無','無','無','計算機'], trait:'避險', desc:'機率降低受到傷害。', m:'melee', sk:'risk_hedge', masteryItem:'計算機', passive:'dmg_reduce'},
-
-    {n:'特教老師 (Yan)', s:{s:5,a:6,i:8,w:10}, back:'Yan在特殊學校教了十二年自閉症和唐氏症孩子，學生都叫她「Yan老師」。她相信世界上沒有教不好的孩子，只有沒被愛過的孩子。末日那天，她正在帶學生排練畢業表演，當第一隻喪屍衝進禮堂，她第一反應不是跑，而是把所有孩子護在身後，用教鞭指著怪物大喊：「不准欺負我學生！」然後用盡全力把門鎖上。日蝕的紅光透過窗簾照進來，她抱著哭成一團的孩子輕聲說：「老師在，別怕。」那一刻，她不再是老師，而是他們最後的媽媽。', g:['教鞭','無','無','教師服','論語'], trait:'詠春', desc:'機率二連擊。', m:'melee', sk:'dictionary', masteryItem:'論語', passive:'wing_chun'},
-
-    {n:'Nvidia工程師 (司徒)', s:{s:4,a:6,i:12,w:5}, back:'司徒在Nvidia香港研發中心做GPU架構師，三十一歲，參與過RTX 40系列設計。他每天加班到凌晨三點，同事都說他是「算力狂人」。末日那天，他正在公司機房測試RTX 5090原型卡，突然停電，整棟大樓陷入黑暗。第一隻喪屍衝進來時，他順手拔下測試中的顯卡，用鋒利的散熱鰭片割開對方脖子。看著地上冒煙的屍體，他突然笑了：「原來RTX不只能跑光追，還能跑血。」然後把顯卡插回口袋，像插一把刀。', g:['RAM切割刀','無','無','主板護甲','RTX 5090'], trait:'CUDA核心', desc:'攻擊機率過熱燃燒。', m:'melee', sk:'dlss', masteryItem:'RTX 5090', passive:'burn_proc'},
-
-    {n:'飛鏢運動員 (L.C)', s:{s:5,a:12,i:5,w:6}, back:'L.C是香港飛鏢代表隊隊長，連續五年全港冠軍，亞洲賽第三。酒吧裡的人都說他「百步穿楊」。末日那天，他正在九龍灣一間酒吧比賽決賽，投出最後一支鏢正中紅心那一刻，燈全滅。第一隻喪屍撲來，他想都沒想把鎢鋼鏢從鏢盤拔下，精準射進對方眼窩。整個酒吧安靜三秒，然後爆發掌聲——在他們眼裡，他還是那個永遠不失手的王者。只是現在，靶子不再是鏢盤，而是活生生的腦袋。', g:['無','鎢鋼飛鏢','無','港隊隊服','迷信平安符'], trait:'百步穿楊', desc:'高命中高暴擊。', m:'ranged', sk:'bullseye', masteryItem:'迷信平安符', passive:'high_acc_crit'},
-
-    {n:'健身教練 (Ricky)', s:{s:12,a:6,i:4,w:7}, back:'Ricky在健身房當私教十年，身材保持在6%體脂，學生都叫他「人形怪獸」。他相信肌肉是最好的鎧甲。末日那天，他正在幫學生教深蹲，突然停電，第一隻喪屍衝進來咬傷一個學員。他二話不說把杠鈴片砸向怪物，然後把啞鈴塞給嚇傻的學生：「舉起來！今天加訓！」當他赤手空拳把第三隻喪屍的頭擰下來時，整個健身房的人都看呆了。從那天起，健身房不再是減脂的地方，而是生存訓練營，而他，是唯一的教官。', g:['啞鈴','無','無','肌肉護甲','健身奶粉'], trait:'鐵壁', desc:'機率格擋傷害。', m:'melee', sk:'creatine', masteryItem:'健身奶粉', passive:'block_chance'},
-
-    {n:'心理醫生 (Cyn)', s:{s:4,a:5,i:10,w:8}, back:'Cyn在私人診所做心理醫生十年，最擅長催眠治療。她能用三分鐘讓失眠患者入睡，也能讓抑鬱症患者哭出來。末日那天，她正在幫一個恐懼症患者做催眠，當她數到「三」時，整間診所突然停電。患者睜眼那一刻變成喪屍撲向她，她本能地搖動懷錶：「看著它……放鬆……睡吧。」喪屍居然真的僵在半空。Cyn深呼吸，第一次覺得自己的專業在末日裡才是真正的超能力。', g:['陀錶','無','無','醫生袍','安眠藥'], trait:'催眠大師', desc:'攻擊機率睡眠，睡眠必暴。', m:'melee', sk:'hypnosis', masteryItem:'安眠藥', passive:'sleep_hit'},
-
-    {n:'造型師 (Kenji)', s:{s:6,a:8,i:7,w:5}, back:'Kenji是銅鑼灣最紅髮型師，剪一個頭收五千，明星排隊等他。剪刀從沒離過他的手。末日那天，他正在幫一個女星染髮，突然停電，第一隻喪屍衝進店裡。他想都沒想，把鈦金屬剪刀插進對方太陽穴，血噴到剛染好的頭髮上，他皺眉：「糟蹋咗個色。」然後把剪刀擦乾淨，繼續幫女星把頭髮剪短：「以後要方便打架，長髮唔實用。」從那天起，他的剪刀不再只是造型工具，而是收割生命的藝術品。', g:['鈦金屬鉸剪','無','無','巴黎世家外套','染髮劑'], trait:'愛德華剪刀手', desc:'攻擊造成流血。', m:'melee', sk:'shave', masteryItem:'染髮劑', passive:'bleed_hit'},
-
-    {n:'Tesla工程師 (Pepper)', s:{s:5,a:6,i:10,w:5}, back:'Pepper在Tesla上海工廠做電池工程師，三十歲，參與過Cybertruck設計。末日那天，他正在香港探親，突然日蝕，整條街陷入黑暗。第一隻喪屍衝來時，他順手拔下路邊充電樁的高壓線，電流瞬間把怪物烤成焦炭。他看著冒煙的屍體，興奮地打了個響指：「原來特斯拉線圈真係打得！」然後把Elon Musk自傳從背包拿出來，親了一口：「老闆，我冇令你失望。」', g:['無','電擊槍','無','法拉第籠','Elon Musk自傳'], trait:'科技召喚', desc:'召喚CyberTruck撞擊。', m:'ranged', sk:'tesla_coil', masteryItem:'Elon Musk自傳', passive:'truck_hit'},
-
-    {n:'數學家 (TheKid)', s:{s:3,a:5,i:12,w:6}, back:'TheKid是香港大學數學系最年輕副教授，二十八歲，專攻亂數與機率論。學生都說他腦袋裡住著外星人。末日那天，他正在黑板證明一個猜想，突然停電。第一隻喪屍衝進教室，他看了一眼，淡定地把三角尺當飛鏢射出去，正中眉心。然後轉身繼續寫公式：「死亡事件獨立，機率分布仍成立。」學生嚇傻，他回頭笑笑：「別怕，這只是更大的樣本空間。」從那天起，他把整個末日當成一場終極數學實驗。', g:['三角尺','無','無','無','如意算盤'], trait:'諾貝爾獎', desc:'每回合隨機提升屬性。', m:'melee', sk:'pi_strike', masteryItem:'如意算盤', passive:'random_buff'},
-
-    {n:'Lil Kid (小學生)', s:{s:4,a:5,i:5,w:2}, back:'阿明十歲，讀小五，最愛BB彈槍和薯片。末日那天是學校旅行日，他們去海洋公園，當日蝕發生，老師第一個變成喪屍咬斷同學脖子。全班尖叫，他卻從書包掏出BB彈槍，邊哭邊射：「唔准欺負我同學！」雖然沒用，但他成功吸引怪物注意，讓其他小朋友逃走。他穿著小學生校服，背著薯片書包，在遊樂園裡奔跑，邊跑邊喊：「媽媽約咗六點接我，我唔可以遲到！」', g:['無','BB彈槍','無','小學生校服','薯片套裝'], trait:'細細粒', desc:'數值減半，但高閃避。', m:'ranged', sk:'kid_squad', masteryItem:'薯片套裝', passive:'high_dodge'},
-
-    {n:'莊家 (Sage)', s:{s:6,a:5,i:9,w:7}, back:'Sage是地下錢莊真正話事人，四十五歲，手下幾百小弟。從不親自動手，因為「有錢能使鬼推磨」。末日那天，他正在尖沙咀頂層辦公室數錢，突然停電。第一隻喪屍衝進來，他身邊小弟瞬間被咬死。他嘆口氣，打開保險櫃，拿出鑽石拳套戴上：「看來今日要親自落場。」一拳把怪物頭打爆，血濺滿AE黑卡。他看著地上屍體，搖頭：「連鬼都唔聽話，時代真係變了。」', g:['鑽石拳套','無','無','富豪防彈衣','AE黑卡'], trait:'鈔能力', desc:'小弟擋刀，保鏢反擊。', m:'melee', sk:'money_rain', masteryItem:'AE黑卡', passive:'money_shield'},
-
-    {n:'地產商 (Kim)', s:{s:7,a:5,i:8,w:6}, back:'Kim是香港新晉地產商，四十歲，手握十幾個樓盤。末日那天，他正在西九龍新盤銷售中心開香檳慶祝全盤賣完，突然日蝕，整棟大樓變成屠宰場。他冷靜地拿起勞斯萊斯雨傘當武器，把衝進來的怪物一一戳穿腦袋。看著滿地屍體，他嘆氣：「呢個項目，始終都要收樓。」然後打開大哥大，對還沒變異的工人說：「加班加點，今晚之內要把屍體清走，明天繼續賣樓。」', g:['勞斯萊斯雨傘','無','無','低調名牌西裝','大哥大'], trait:'地產霸權', desc:'營地消耗少，工人助陣。', m:'melee', sk:'waterfall', masteryItem:'大哥大', passive:'dev_buff'},
-
-    {n:'F1賽車手 (Yolo)', s:{s:6,a:11,i:6,w:6}, back:'Yolo是香港首位F1車手，二十七歲，上季拿過兩站積分。末日那天，他正在赤柱試新法拉利SF90，突然日蝕，整條路變成地獄。他把車速飆到300km/h，在屍群中穿梭，像在賽道上找過彎點一樣精準。第一隻撲上引擎蓋的喪屍被他一個甩尾甩飛。他透過車載對講機大喊：「這才是真正的街頭賽道！」然後把油門踩到底，衝向未知的終點線。', g:['F1賽車方向盤','無','無','法拉利車隊服','法拉利車隊鴨舌帽'], trait:'F1感應', desc:'被動20%閃避。', m:'melee', sk:'drift', masteryItem:'法拉利車隊服', passive:'racer_sense'},
-
-    {n:'黑客 (Trance)', s:{s:4,a:8,i:10,w:5}, back:'Trance是傳說中的零日黑客，二十五歲，從未被人抓到。末日那天，他正在銅鑼灣一間網吧用Diji無人機測試新漏洞，突然日蝕，整間網吧變成屠宰場。他戴上Anonymous面具，冷靜地敲鍵盤，把網吧監控變成自己的「矩陣」。當喪屍衝來，他按下Enter，整間網吧的音響同時播放177dB白噪音，所有怪物瞬間爆頭。他站起身，第一次在現實中啟動了「Matrix模式」。', g:['無','Diji戰術飛行器','Anonymous面具','無','ROG青軸鍵盤'], trait:'BluePill RedPill', desc:'每回合紅藍藥丸判定。', m:'ranged', sk:'matrix', masteryItem:'ROG青軸鍵盤', passive:'pills'},
-
-    {n:'三星廚師 (Tony)', s:{s:8,a:7,i:6,w:6}, back:'Tony是米芝蓮三星總廚，四十二歲，全球只有七人擁有此榮譽。末日那天，他正在中環餐廳做最後一道菜，突然停電，第一隻喪屍衝進廚房。他嘆氣，把金飯碗扣在怪物頭上，然後用菜刀一Q清檯——像清麻將一樣乾淨俐落。血濺滿他雪白的廚師袍，他看著地上屍體，搖頭：「食材新鮮度不足，扣分。」然後把剩下的奧蘇利雲之桿插進腰間：「今晚改做人頭料理。」', g:['金飯碗','無','無','廚師袍','奧蘇利雲之桿'], trait:'米芝蓮三星', desc:'每回合回血。', m:'melee', sk:'one_cue', hpBonus: 50, masteryItem:'奧蘇利雲之桿', passive:'chef_regen'},
-
-    {n:'神學家 (程牧師)', s:{s:5,a:5,i:8,w:10}, back:'程牧師在九龍城神學院教了二十年神學，五十歲，學生都說他比聖經還嚴肅。末日那天，他正在教堂講道，突然日蝕，會眾第一個變成喪屍撲向他。他拿起十字架擋在胸前，大聲念出審判經文，怪物居然真的停住，然後頭顱爆開。他看著滿地屍體，第一次懷疑自己的信仰——但下一秒，他舉起聖經大喊：「這不是末日，這是審判的開始！」從那天起，他不再傳寬恕，而是傳審判。', g:['十字架','無','無','牧師袍','King James Bible'], trait:'上帝之力', desc:'每回合扣敵血。', m:'melee', sk:'holy_chant', masteryItem:'King James Bible', passive:'god_dot'},
-
-    {n:'道士 (林正英)', s:{s:7,a:7,i:8,w:9}, back:'阿英是林正英關門弟子，四十八歲，專門拍殭屍片替身兼開壇做法事。末日那天，他正在片場拍《殭屍先生》續集，突然日蝕，群演真的變成殭屍撲來。他二話不說掏出桃木劍，大喝「急急如律令！」第一隻殭屍瞬間定在原地，然後被他一劍穿心。導演嚇傻，他回頭冷笑：「呢場戲，我唔使NG。」然後披上天師袍，開始真正斬妖除魔。', g:['桃木劍','無','無','天師袍','八卦鏡'], trait:'殭屍道長', desc:'隨機法術增強。', m:'melee', sk:'talisman', masteryItem:'桃木劍', passive:'taoist_buff'},
-
-    {n:'地盤判頭 (老戴)', s:{s:9,a:5,i:5,w:7}, back:'老戴五十歲，做了三十五年地盤判頭，手下幾百工人。末日那天，他正在西九龍地盤開工，突然日蝕，第一隻喪屍從腳手架跳下來。他抄起燒焊槍，一槍把怪物燒成焦炭，然後大喊：「加班！今晚之內要把屍體清走！」工人嚇傻，他吐了口痰：「驚咩？老子做地盤三十五年，乜嘢怪獸冇見過？」然後戴上燒焊面罩，開始真正的高溫作業。', g:['無','火槍','燒焊面罩','無','冷凍蒸魚飯'], trait:'高熱作業', desc:'火槍燃燒敵人。', m:'ranged', sk:'welding', masteryItem:'冷凍蒸魚飯', passive:'welder_burn'},
-
-    {n:'警察 (馮狗)', s:{s:8,a:6,i:5,w:5}, back:'馮狗是休班警司，四十五歲，外號「馮狗」因為查案像狗一樣不放。末日那天，他正在茶餐廳食飯，突然日蝕，第一隻喪屍衝進來。他想都沒想掏出雷明登散彈槍，一槍把怪物轟成兩截。然後對嚇傻的茶客說：「冇事，休班都照查。」從那天起，他不再分上下班，見怪就「逮捕」，逮捕失敗就地正法。', g:['無','雷明登散彈槍','無','防彈衣','胡椒噴霧'], trait:'休班警', desc:'成功率低但獎勵高。', m:'ranged', sk:'raptor', passive:'bad_cop', masteryItem:'胡椒噴霧'},
-
-    {n:'Popper (Douglas)', s:{s:6,a:9,i:5,w:6}, back:'Douglas是香港最頂級breaking dancer，二十八歲，綽號「Popper」。末日那天，他正在維園練舞，突然日蝕，第一隻喪屍衝來。他一個windmill掃腿把怪物踢飛，然後戴上雷鬼頭，開啟Red Bull模式。音樂停了，但他還在跳——因為在死亡邊緣起舞，才是真正的breaking。從那天起，他的舞伴不再是地板，而是屍體。', g:['無','手槍','雷鬼頭','Boogaloo西裝','無'], trait:'舞者', desc:'每回合切換舞風。', m:'ranged', sk:'redbull', passive:'dance_style', masteryItem:'雷鬼頭'},
-
-    {n:'追星族 (阿孫)', s:{s:4,a:5,i:5,w:5}, back:'阿孫二十歲，GEM（鄧紫棋）頭號粉絲，追了八年演唱會。末日那天，他正在紅館門口排隊買VIP票，突然日蝕，第一隻喪屍衝來。他想都沒想掏出GEM麥克風，對著怪物飆出人生最高音——玻璃瞬間震碎，怪物抱頭慘叫。他看著倒地的屍體，突然明白：原來歌聲真的可以殺人。從那天起，他不再只是粉絲，而是用歌聲守護偶像世界的最後守護者。', g:['無','GEM麥克風','無','Three Man Down T-Shirt','演唱會VIP門票'], trait:'歌聲魅影', desc:'歌聲干擾敵人。', m:'ranged', sk:'high_pitch', passive:'phantom_voice', masteryItem:'GEM麥克風'}
-];
-
-const QUEST_DB = [
-    // 原有 6 個 (地點已微調以確保唯一性)
-    { n: "清理醫院物資", loc: "廢棄綜合醫院", boss: "縫合怪", desc: "醫院深處據說還有未被污染的血庫與藥品，但那裡的院長已經變成了怪物。", reward: {type:'med', tier:2} },
-    { n: "回收軍械庫", loc: "警察總部大樓", boss: "SWAT暴君", desc: "警局地下室的軍械庫大門被鎖死，你需要去擊敗看守在那裡的變異特警。", reward: {type:'ranged', tier:3} },
-    { n: "遊樂園的悲鳴", loc: "鏽蝕的遊樂園", boss: "小丑皇", desc: "遊樂園每晚都傳來刺耳的笑聲，嚴重影響精神值，去讓那個小丑永遠閉嘴。", reward: {type:'acc', tier:2} },
-    { n: "終結變異源頭", loc: "洩漏的化工廠", boss: "毒液巨獸", desc: "化工廠的洩漏加速了周圍喪屍的進化，必須去關閉閥門並消滅毒液源頭。", reward: {type:'body', tier:3} },
-    { n: "證券所的黃金", loc: "崩塌的證券交易所", boss: "貪婪屍王", desc: "據說金庫裡有一批戰前留下的黃金（高價值飾品），但那裡充滿了生前的貪婪怨念。", reward: {type:'acc', tier:3} },
-    { n: "地鐵站的陰影", loc: "地下鐵總站", boss: "地底巨噬蟲", desc: "地鐵站成為了變異昆蟲的巢穴，牠們正在挖通前往營地的隧道，必須先發制人。", reward: {type:'melee', tier:3} },
-    
-    // 新增 8 個全新任務 (總計 14 個)
-    { n: "核電站的脈動", loc: "輻射核電站", boss: "輻射之王", desc: "核電站的反應堆即將熔毀，那裡被一個全身發光的高能變異體佔據，必須去阻止核心爆炸。", reward: {type:'acc', tier:4} },
-    { n: "電視台的信號", loc: "廣播電視塔", boss: "媒體幻影", desc: "電視塔發出的干擾信號讓所有倖存者頭痛欲裂，據說那裡的變異體能通過屏幕攻擊人的大腦。", reward: {type:'head', tier:3} },
-    { n: "監獄風雲", loc: "赤柱重刑監獄", boss: "典獄長", desc: "監獄裡的重刑犯變成了最兇殘的屍群，而曾經的典獄長現在統治著這座血肉牢籠。", reward: {type:'melee', tier:4} },
-    { n: "擱淺的巨獸", loc: "貨櫃碼頭", boss: "深海利維坦", desc: "一艘滿載物資的貨輪擱淺在碼頭，但一隻來自深海的巨大變異生物正在將其作為築巢地。", reward: {type:'body', tier:4} },
-    { n: "博物館驚魂", loc: "歷史博物館", boss: "法老屍木乃伊", desc: "博物館裡的古代展品似乎受到了病毒影響，一具千年木乃伊復活並獲得了病毒強化的力量。", reward: {type:'acc', tier:3} },
-    { n: "大球場決戰", loc: "奧林匹克體育場", boss: "不死冠軍", desc: "體育場內聚集了數萬喪屍觀眾，正在觀看一場永無止境的角鬥，你需要去挑戰那位不敗的冠軍。", reward: {type:'melee', tier:4} },
-    { n: "墮落的信仰", loc: "山頂大教堂", boss: "墮落主教", desc: "教堂不再是庇護所，主教將信徒獻祭給了病毒，試圖創造出新的神明，必須淨化那裡。", reward: {type:'med', tier:3} },
-    { n: "雲端的總裁", loc: "摩天大樓頂層", boss: "企業號", desc: "在城市最高的辦公室裡，昔日的財團總裁依然坐在皮椅上，但他已經和整棟大樓的神經網絡融為一體。", reward: {type:'ranged', tier:4} }
-];
-
 const EPIC_THEMES = [
     "🏥 廢棄綜合醫院", "🏫 寂靜的私立高中", "🏢 崩塌的證券交易所", "🎡 鏽蝕的遊樂園", "🕍 古老的山中修道院", 
     "🏭 洩漏的化工廠", "🚉 地下鐵總站", "🛳️ 擱淺的豪華郵輪", "🏰 歷史博物館", "🏟️ 奧林匹克體育場", 
     "🚓 警察總部大樓", "🏨 豪華度假酒店", "📡 軍事通訊塔", "🏗️ 未完工的摩天樓", "🌲 變異森林深處"
 ];
-
-const LOCATIONS = [
-    {n:'廢棄超市', d:1, l:'food', desc:'尋找食物'}, {n:'五金店', d:2, l:'melee', desc:'武器零件'}, {n:'診所', d:2, l:'med', desc:'藥品'},
-    {n:'民居', d:1, l:'random', desc:'隨機物資'}, {n:'警局分局', d:3, l:'ranged', desc:'槍械'}, {n:'服裝店', d:1, l:'body', desc:'衣物'},
-    {n:'公園', d:1, l:'random', desc:'散步'}, {n:'銀行', d:3, l:'acc', desc:'貴重品'}, {n:'下水道', d:4, l:'random', desc:'危險探索'},
-    {n:'電子城', d:2, l:'acc', desc:'零件'}, {n:'健身房', d:2, l:'melee', desc:'器械'}, {n:'學校', d:2, l:'random', desc:'物資'}
-];
-
-const LOC_EVENT_DB = {
-    "廢棄超市": [
-        {
-            t: "倒塌的貨架山",
-            s: [
-                { q: "你走進超市深處，發現巨大的金屬貨架像骨牌一樣倒塌，形成了一個複雜的迷宮。在殘骸深處，似乎壓著一個保存完好的軍用補給箱，但結構看起來非常不穩定。", opts: [{t:"小心拆除障礙", type:'good', stat:'i'}, {t:"暴力搬開貨架", type:'bad', stat:'s'}] },
-                { q: "成功清理外層後，你發現補給箱上連著一條細微的絆線，連接著一枚生鏽的手榴彈。看來這是前人留下的防盜陷阱，稍有不慎就會引爆整個區域。", opts: [{t:"拆除陷阱", type:'good', stat:'a'}, {t:"直接打破箱子底部", type:'bad', stat:'luck'}] }
-            ]
-        },
-        {
-            t: "冰櫃裡的求救",
-            s: [
-                { q: "斷電已久的冷凍櫃發出令人作嘔的腐臭味，但你卻隱約聽到裡面傳來敲擊聲。聲音很規律，不像是喪屍的無意識撞擊，難道還有人被困在裡面活著？", opts: [{t:"靠近聆聽", type:'good', stat:'i'}, {t:"直接撬開門", type:'bad', stat:'s'}] },
-                { q: "門打開的瞬間，一隻變異的「凍屍」撲了出來！原來聲音是它骨頭凍硬後敲擊金屬的聲響。它動作僵硬但力大無窮，正試圖把你拖進冰櫃。", opts: [{t:"精準爆頭", type:'good', stat:'a'}, {t:"用蠻力推回去", type:'bad', stat:'s'}] }
-            ]
-        },
-        {
-            t: "罐頭金字塔",
-            s: [
-                { q: "在超市中央，有人用數百個午餐肉罐頭堆成了一座詭異的金字塔。這顯然不是自然形成的，周圍散落著一些類似宗教儀式的圖騰，空氣中瀰漫著不安。", opts: [{t:"觀察周圍痕跡", type:'good', stat:'i'}, {t:"拿了就跑", type:'bad', stat:'a'}] },
-                { q: "當你觸碰罐頭時，天花板上突然跳下幾個瘋狂的倖存者，他們自稱「午餐肉教徒」，揮舞著磨尖的湯匙向你衝來，高喊著要你成為祭品。", opts: [{t:"威嚇他們", type:'good', stat:'w'}, {t:"戰鬥", type:'bad', stat:'s'}] }
-            ]
-        },
-        {
-            t: "收銀台的對峙",
-            s: [
-                { q: "你看到收銀台後躲著一個顫抖的小女孩，抱著一袋麵包。但同時，另一邊的陰影裡，一隻爬行者正悄悄逼近她，唾液滴在地板上發出嘶嘶聲。", opts: [{t:"投擲物品引開怪物", type:'good', stat:'luck'}, {t:"開槍射擊", type:'bad', stat:'a'}] },
-                { q: "怪物被解決了，但槍聲/聲響引來了更多喪屍。小女孩嚇得腿軟無法動彈，外面的屍群正在撞擊玻璃門，玻璃即將破碎。", opts: [{t:"揹起女孩逃跑", type:'good', stat:'s'}, {t:"尋找後門", type:'bad', stat:'i'}] }
-            ]
-        },
-        {
-            t: "腐爛的特價區",
-            s: [
-                { q: "特價區的地板上積滿了黑色的黏液，這些黏液似乎有生命般在緩慢蠕動。在黏液中心，有一把散發著微光的武器插在屍堆上。", opts: [{t:"利用周圍貨架跳過去", type:'good', stat:'a'}, {t:"涉水而過", type:'bad', stat:'w'}] },
-                { q: "當你拔出武器時，黏液瞬間沸騰，匯聚成一個巨大的人形污泥怪。物理攻擊似乎對它效果不佳，它正試圖包裹你的身體。", opts: [{t:"尋找易燃物火攻", type:'good', stat:'i'}, {t:"快速掙脫", type:'bad', stat:'s'}] }
-            ]
-        }
-    ],
-    "五金店": [
-        {
-            t: "改裝的工作台",
-            s: [
-                { q: "這間五金店曾被一名技工佔領，工作台上留著一張未完成的武器藍圖和半成品。只要能理解上面的複雜電路，或許能組裝出一把強力武器。", opts: [{t:"研究藍圖", type:'good', stat:'i'}, {t:"憑直覺組裝", type:'bad', stat:'luck'}] },
-                { q: "組裝到一半，店鋪深處的發電機突然啟動，強大的電流流竄過整個工作台。你需要在那一瞬間接通最後的線路，否則就會短路爆炸。", opts: [{t:"穩定雙手接線", type:'good', stat:'a'}, {t:"用絕緣體強壓", type:'bad', stat:'s'}] }
-            ]
-        },
-        {
-            t: "懸掛的陷阱",
-            s: [
-                { q: "天花板上懸掛著無數尖銳的工具：鋸片、螺絲刀、鐵鎚。這是一個巨大的重力陷阱陣，而唯一的通道就在正下方，通往後面的倉庫。", opts: [{t:"慢慢匍匐前進", type:'good', stat:'a'}, {t:"尋找控制機關", type:'bad', stat:'i'}] },
-                { q: "走到一半，一隻老鼠觸發了機關，所有工具開始像雨點般落下！你被困在中間，必須在幾秒內做出反應。", opts: [{t:"尋找掩體躲避", type:'good', stat:'luck'}, {t:"用隨身武器格擋", type:'bad', stat:'s'}] }
-            ]
-        },
-        {
-            t: "油漆罐堡壘",
-            s: [
-                { q: "有人用數百個硬化油漆罐築起了一道牆。牆後傳來沉重的呼吸聲，似乎是一隻被困住的高階變異體，但它身邊可能有稀有的工業材料。", opts: [{t:"尋找通風口潛入", type:'good', stat:'i'}, {t:"推倒油漆牆", type:'bad', stat:'s'}] },
-                { q: "你驚動了裡面的「油漆巨怪」，它全身覆蓋著乾涸的彩色油漆，防禦力極高。它憤怒地向你衝撞過來，周圍全是易燃的稀釋劑。", opts: [{t:"引爆稀釋劑", type:'good', stat:'i'}, {t:"攻擊關節薄弱處", type:'bad', stat:'a'}] }
-            ]
-        },
-        {
-            t: "電鋸狂人",
-            s: [
-                { q: "店鋪深處傳來電鋸空轉的轟鳴聲。一個戴著防護面具的喪屍正拿著兩把改裝電鋸在亂揮，切斷了所有靠近的物體，包括貨架。", opts: [{t:"等待燃料耗盡", type:'good', stat:'w'}, {t:"從背後偷襲", type:'bad', stat:'a'}] },
-                { q: "電鋸喪屍發現了你，瘋狂地揮舞著發紅的鋸片逼近。你發現它背上有一個外掛的電池包，那可能是它的動力來源。", opts: [{t:"射擊電池包", type:'good', stat:'a'}, {t:"近身破壞", type:'bad', stat:'s'}] }
-            ]
-        },
-        {
-            t: "智能門鎖",
-            s: [
-                { q: "一個加固的保險櫃，上面裝著極其先進的電子密碼鎖。這不是普通的五金店會有的東西，裡面肯定藏著老闆的秘密私房錢。", opts: [{t:"嘗試破解密碼", type:'good', stat:'i'}, {t:"用切割機切開", type:'bad', stat:'s'}] },
-                { q: "密碼鎖發出警報，釋放出催眠氣體。你的視線開始模糊，必須在昏迷前打開它或者逃離，否則就會成為甕中之鱉。", opts: [{t:"閉氣堅持破解", type:'good', stat:'w'}, {t:"立刻砸爛面板", type:'bad', stat:'s'}] }
-            ]
-        }
-    ],
-    "診所": [
-        {
-            t: "瘋狂牙醫",
-            s: [
-                { q: "診療椅上綁著一具屍體，牙齒全被拔光了。一個穿著白大褂的喪屍手裡拿著牙鑽，轉過頭來看著你，它的口罩下全是血。", opts: [{t:"冷靜觀察破綻", type:'good', stat:'w'}, {t:"先發制人", type:'bad', stat:'a'}] },
-                { q: "牙醫喪屍靈活地躲開了，它舉起高速旋轉的牙鑽刺向你的眼睛，發出刺耳的聲音，這聲音讓你SAN值狂掉。", opts: [{t:"克服恐懼反擊", type:'good', stat:'w'}, {t:"用物品格擋", type:'bad', stat:'s'}] }
-            ]
-        },
-        {
-            t: "藥品櫃的誘惑",
-            s: [
-                { q: "你發現了一個上了鎖的管制藥品櫃，裡面可能有嗎啡或抗生素。但櫃子上貼著『內有劇毒』的標籤，這可能是前人的謊言，也可能是真的。", opts: [{t:"仔細檢查痕跡", type:'good', stat:'i'}, {t:"冒險撬開", type:'bad', stat:'luck'}] },
-                { q: "櫃門打開，一團綠色的孢子粉塵噴了出來！這確實是個陷阱，或者藥品已經變異。你感到呼吸困難，肺部像火燒一樣。", opts: [{t:"立刻尋找解毒劑", type:'good', stat:'i'}, {t:"強行忍受", type:'bad', stat:'w'}] }
-            ]
-        },
-        {
-            t: "血袋培養皿",
-            s: [
-                { q: "輸液室裡掛滿了血袋，但這些血袋都在跳動。管子連接著中間一個巨大的肉瘤，這看起來像是一個正在孵化的變異胚胎。", opts: [{t:"切斷供血管", type:'good', stat:'a'}, {t:"直接燒毀肉瘤", type:'bad', stat:'i'}] },
-                { q: "肉瘤破裂，無數像水蛭一樣的小怪物湧了出來，它們速度極快，試圖鑽進你的皮膚吸血。數量太多了，無法一隻隻殺。", opts: [{t:"利用紫外線燈", type:'good', stat:'i'}, {t:"大範圍攻擊", type:'bad', stat:'s'}] }
-            ]
-        },
-        {
-            t: "X光室的陰影",
-            s: [
-                { q: "X光室的鉛門緊閉，裡面傳來抓撓聲。透過觀察窗，你看到一個骨骼結構完全異於常人的影子映在屏幕上，它有四隻手。", opts: [{t:"設置門口陷阱", type:'good', stat:'i'}, {t:"衝進去突襲", type:'bad', stat:'s'}] },
-                { q: "怪物衝破鉛門，它是一個全身骨質增生的變異體，皮膚像盔甲一樣硬。普通的攻擊根本打不穿它的骨甲。", opts: [{t:"攻擊眼睛軟組織", type:'good', stat:'a'}, {t:"用重物鈍擊震盪", type:'bad', stat:'s'}] }
-            ]
-        },
-        {
-            t: "無盡的掛號單",
-            s: [
-                { q: "櫃台上堆滿了掛號單，所有單據的病人名字都是同一個：『404號實驗體』。這間診所似乎是某個地下實驗室的偽裝入口。", opts: [{t:"搜索暗門開關", type:'good', stat:'i'}, {t:"翻找櫃台物資", type:'bad', stat:'luck'}] },
-                { q: "你觸發了暗門，地板突然打開。你滑進了一個充滿福爾馬林味道的地下室，面前是一個被浸泡在罐子裡卻還活著的大腦。", opts: [{t:"嘗試溝通", type:'good', stat:'w'}, {t:"摧毀大腦", type:'bad', stat:'s'}] }
-            ]
-        }
-    ],
-    "民居": [
-        {
-            t: "最後的晚餐",
-            s: [
-                { q: "餐桌上擺滿了腐爛的食物，一家四口的屍體整齊地坐在椅子上，他們是自殺的。桌子中間放著一把左輪手槍和一封遺書。", opts: [{t:"閱讀遺書", type:'good', stat:'w'}, {t:"檢查手槍", type:'bad', stat:'i'}] },
-                { q: "屍體突然動了！原來病毒即使在死後也感染了他們。四隻喪屍在狹窄的飯廳裡同時撲向你，距離太近了！", opts: [{t:"掀翻桌子阻擋", type:'good', stat:'s'}, {t:"靈活閃避", type:'bad', stat:'a'}] }
-            ]
-        },
-        {
-            t: "閣樓的秘密",
-            s: [
-                { q: "天花板上有奇怪的抓痕，通往閣樓的梯子被刻意鋸斷了。上面可能藏著物資，也可能藏著這棟房子的噩夢。", opts: [{t:"疊起傢具爬上去", type:'good', stat:'s'}, {t:"用繩索攀爬", type:'bad', stat:'a'}] },
-                { q: "爬進閣樓，你發現這裡是一個倖存者的狙擊點，有精良的裝備。但牆角縮著一個精神崩潰的老兵，他舉槍對準了你。", opts: [{t:"安撫勸說", type:'good', stat:'w'}, {t:"奪槍", type:'bad', stat:'s'}] }
-            ]
-        },
-        {
-            t: "寵物房間",
-            s: [
-                { q: "這間房間貼滿了貓咪海報，地上有無數個空罐頭。一隻體型巨大的緬因貓坐在櫃頂，它的眼睛散發著紅光，顯然已經變異。", opts: [{t:"拿出食物誘惑", type:'good', stat:'luck'}, {t:"威嚇驅趕", type:'bad', stat:'w'}] },
-                { q: "變異貓發出如猛虎般的咆哮，速度快如閃電，在房間裡飛簷走壁，利爪在牆上留下深痕。它把你看作是一隻大老鼠。", opts: [{t:"預判路徑反擊", type:'good', stat:'i'}, {t:"用被單捕捉", type:'bad', stat:'a'}] }
-            ]
-        },
-        {
-            t: "收藏家的寶庫",
-            s: [
-                { q: "這戶人家似乎是個冷兵器愛好者，牆上掛滿了劍和盔甲。但大多數都是裝飾品，你需要分辨出哪一把是真正能用的利器。", opts: [{t:"鑑別鋼材紋路", type:'good', stat:'i'}, {t:"隨手拿一把試揮", type:'bad', stat:'s'}] },
-                { q: "你取下寶劍的瞬間，觸發了防盜機關，房間的門窗全部落下鐵柵欄，毒氣開始釋放。這是一個針對小偷的死亡陷阱。", opts: [{t:"尋找通風口", type:'good', stat:'i'}, {t:"破窗而出", type:'bad', stat:'s'}] }
-            ]
-        },
-        {
-            t: "浴室的繭",
-            s: [
-                { q: "浴缸裡沒有水，而是充滿了白色的絲狀物，包裹成一個巨大的繭。透過半透明的絲，能看到裡面有一個人形輪廓。", opts: [{t:"用火燒掉", type:'good', stat:'i'}, {t:"切開查看", type:'bad', stat:'luck'}] },
-                { q: "繭被破壞，裡面的人竟然還活著，但已經與某種寄生蟲共生。他哀求你殺了他，同時他的身體開始裂開，寄生蟲準備破體而出。", opts: [{t:"給他個痛快", type:'good', stat:'w'}, {t:"收集寄生蟲樣本", type:'bad', stat:'i'}] }
-            ]
-        }
-    ],
-    "警局分局": [
-        {
-            t: "上鎖的軍械庫",
-            s: [
-                { q: "軍械庫的大門是厚重的鋼板，電子鎖已經失效。門縫裡透出一股槍油的味道，裡面肯定有好東西，但強行破門會發出巨大聲響。", opts: [{t:"尋找備用鑰匙", type:'good', stat:'i'}, {t:"定向爆破", type:'bad', stat:'s'}] },
-                { q: "門開了，但巨大的聲響引來了整棟樓的喪屍警衛。你被困在死胡同裡，唯一的出路就是殺出一條血路，或者利用軍械庫裡的武器。", opts: [{t:"架設機槍防守", type:'good', stat:'a'}, {t:"尋找後門突圍", type:'bad', stat:'luck'}] }
-            ]
-        },
-        {
-            t: "審訊室的怪物",
-            s: [
-                { q: "審訊室的單向玻璃後，坐著一個穿著拘束衣的犯人。他低著頭一動不動，但你感覺到一股強烈的殺氣透過玻璃刺痛你的皮膚。", opts: [{t:"繞過審訊室", type:'good', stat:'luck'}, {t:"進去查看", type:'bad', stat:'w'}] },
-                { q: "那犯人掙脫了拘束衣！他是一個變異的力量型變態殺手，雙手即使戴著手銬也能輕易捏碎桌角。他在狹小的空間裡向你衝撞。", opts: [{t:"利用桌椅周旋", type:'good', stat:'a'}, {t:"正面格鬥", type:'bad', stat:'s'}] }
-            ]
-        },
-        {
-            t: "證物房的毒氣",
-            s: [
-                { q: "證物房裡存放著大量繳獲的毒品和化學品，但在末日中發生了洩漏，混合成了一種致幻毒氣。你剛進去就看見死去的親人在向你招手。", opts: [{t:"屏息保持理智", type:'good', stat:'w'}, {t:"快速尋找防毒面具", type:'bad', stat:'i'}] },
-                { q: "幻覺越來越強，你看到手中的武器變成了毒蛇，周圍的牆壁在融化。一個巨大的幻影惡魔出現在你面前，你需要分清現實與虛幻。", opts: [{t:"攻擊幻影", type:'good', stat:'w'}, {t:"憑記憶盲打", type:'bad', stat:'luck'}] }
-            ]
-        },
-        {
-            t: "局長的保險箱",
-            s: [
-                { q: "在局長辦公室，你發現一個隱蔽的保險箱。桌上有一張照片，背面寫著『生日快樂』。密碼可能與此有關。", opts: [{t:"推理工整密碼", type:'good', stat:'i'}, {t:"尋找其他線索", type:'bad', stat:'luck'}] },
-                { q: "三次嘗試失敗，保險箱啟動了自毀程序，正在倒數。你必須在10秒內做出決斷，是放棄還是冒險用物理手段停止倒數。", opts: [{t:"拆除自毀電路", type:'good', stat:'i'}, {t:"抱著保險箱跳窗", type:'bad', stat:'s'}] }
-            ]
-        },
-        {
-            t: "警犬籠",
-            s: [
-                { q: "後院的警犬籠裡，幾隻穿著防彈背心的德牧喪屍正在撕咬鐵網。它們保留了生前的戰術素養，正試圖從破損處鑽出來。", opts: [{t:"加固鐵網", type:'good', stat:'s'}, {t:"爬上高處射擊", type:'bad', stat:'a'}] },
-                { q: "最大的那隻警犬王跳出了圍欄，它咆哮著指揮其他狗包圍你。這是一次有組織的狩獵，你必須先解決頭領。", opts: [{t:"擒賊先擒王", type:'good', stat:'s'}, {t:"用聲波干擾", type:'bad', stat:'i'}] }
-            ]
-        }
-    ],
-    "服裝店": [
-        {
-            t: "假人模特兒",
-            s: [
-                { q: "店裡站滿了塑料模特兒，在昏暗的燈光下分不清真假。你總覺得當你轉身時，這些模特兒的位置發生了變化。", opts: [{t:"打碎所有模特", type:'good', stat:'s'}, {t:"仔細觀察關節", type:'bad', stat:'i'}] },
-                { q: "其中一個『模特』突然動了！它是一個皮膚硬化像塑料一樣的偽裝者，手指像尖刀一樣鋒利，已經貼到了你的背後。", opts: [{t:"向前翻滾閃避", type:'good', stat:'a'}, {t:"反手肘擊", type:'bad', stat:'s'}] }
-            ]
-        },
-        {
-            t: "試衣間的尖叫",
-            s: [
-                { q: "最裡面的試衣間傳來女人的哭聲，簾子緊緊拉著。地上一雙紅色的高跟鞋特別顯眼，鞋尖對著簾子裡面。", opts: [{t:"用長矛挑開簾子", type:'good', stat:'luck'}, {t:"出聲詢問", type:'bad', stat:'w'}] },
-                { q: "簾子拉開，裡面沒有人，只有一個錄音機在播放哭聲。這時，天花板上的通風口跳下一個獵手，原來這是個誘餌陷阱。", opts: [{t:"快速反應射擊", type:'good', stat:'a'}, {t:"利用狹窄空間反擊", type:'bad', stat:'s'}] }
-            ]
-        },
-        {
-            t: "名牌大衣",
-            s: [
-                { q: "一件看起來防禦力極高的名牌皮草掛在展示架上，幾乎完好無損。但它上面似乎沾滿了某種吸引喪屍的費洛蒙。", opts: [{t:"清洗後帶走", type:'good', stat:'i'}, {t:"直接穿上", type:'bad', stat:'luck'}] },
-                { q: "剛穿上大衣，周圍街道的喪屍就像發情的野獸一樣瘋狂湧來。你必須在氣味散去之前，抵擋住這波屍潮。", opts: [{t:"脫掉大衣逃跑", type:'good', stat:'a'}, {t:"死守待援", type:'bad', stat:'s'}] }
-            ]
-        },
-        {
-            t: "鏡子迷宮",
-            s: [
-                { q: "這家店設計了大量的落地鏡，讓空間看起來無限延伸。你在鏡子裡看到了無數個自己，還有無數個喪屍的倒影，分不清方向。", opts: [{t:"打破鏡子", type:'good', stat:'s'}, {t:"看地面辨位", type:'bad', stat:'i'}] },
-                { q: "一隻特殊的「鏡魔」喪屍藏在鏡子後，它能模仿你的動作。當你舉刀時，它也舉刀，讓你無法下手。你需要打破這個鏡像模仿。", opts: [{t:"做出假動作", type:'good', stat:'i'}, {t:"閉眼聽聲辨位", type:'bad', stat:'w'}] }
-            ]
-        },
-        {
-            t: "裁縫的剪刀",
-            s: [
-                { q: "裁縫室裡，一個身材高大的變異體正在用巨大的剪刀裁剪屍體的皮膚，試圖縫製一件『人皮大衣』。它對藝術非常專注。", opts: [{t:"悄悄繞過", type:'good', stat:'a'}, {t:"背後偷襲", type:'bad', stat:'luck'}] },
-                { q: "它發現了你，認為你的皮膚是完美的布料。那把巨大的剪刀揮舞起來像斷頭台一樣，能輕易剪斷骨頭。", opts: [{t:"奪取剪刀", type:'good', stat:'s'}, {t:"利用布料纏住它", type:'bad', stat:'i'}] }
-            ]
-        }
-    ],
-    "公園": [
-        {
-            t: "旋轉木馬",
-            s: [
-                { q: "遊樂區的旋轉木馬居然還在轉動，音樂斷斷續續，像壞掉的八音盒。木馬上綁著幾具屍體，隨著旋轉上下起伏。", opts: [{t:"切斷電源", type:'good', stat:'i'}, {t:"無視並離開", type:'bad', stat:'w'}] },
-                { q: "電源切斷後，木馬中心突然炸開，一隻巨大的變異蜘蛛從裡面爬了出來。原來旋轉木馬是它編織網的捲線器。", opts: [{t:"火攻蛛網", type:'good', stat:'i'}, {t:"攻擊蜘蛛腹部", type:'bad', stat:'a'}] }
-            ]
-        },
-        {
-            t: "人工湖的魅影",
-            s: [
-                { q: "平靜的人工湖面漂浮著一個補給箱。水看起來很黑，深不見底。偶爾有巨大的氣泡冒出水面。", opts: [{t:"製作木筏", type:'good', stat:'i'}, {t:"游泳過去", type:'bad', stat:'s'}] },
-                { q: "水下伸出一隻巨大的觸手纏住了你！那是一條變異的巨型錦鯉，嘴裡長滿了剃刀般的牙齒。你在水中無法呼吸，必須速戰速決。", opts: [{t:"刺擊魚鰓", type:'good', stat:'a'}, {t:"掙脫游回岸邊", type:'bad', stat:'s'}] }
-            ]
-        },
-        {
-            t: "流浪漢的帳篷",
-            s: [
-                { q: "灌木叢深處有一個隱蔽的帳篷，周圍佈滿了警戒鈴鐺。裡面可能住著一位隱居的高人，或者一個食人魔。", opts: [{t:"在遠處喊話", type:'good', stat:'w'}, {t:"潛伏接近", type:'bad', stat:'a'}] },
-                { q: "帳篷裡衝出一群訓練有素的變異猴子！原來這裡是個馬戲團馴獸師的營地，他已經死了，猴子們繼承了他的遺產並極具攻擊性。", opts: [{t:"用食物安撫", type:'good', stat:'luck'}, {t:"群戰", type:'bad', stat:'s'}] }
-            ]
-        },
-        {
-            t: "植物園的呼吸",
-            s: [
-                { q: "植物園裡的植物長得異常茂盛，甚至覆蓋了路燈。你聽到類似人類呼吸的聲音從花叢中傳來，空氣中瀰漫著甜膩的花香。", opts: [{t:"戴上防毒面具", type:'good', stat:'i'}, {t:"揮刀開路", type:'bad', stat:'s'}] },
-                { q: "這些是食人花！花香有致幻作用，藤蔓迅速纏住了你的四肢。花朵張開，露出了裡面的酸液消化池。", opts: [{t:"斬斷主根", type:'good', stat:'s'}, {t:"點火燒花", type:'bad', stat:'luck'}] }
-            ]
-        },
-        {
-            t: "廣場舞屍群",
-            s: [
-                { q: "在公園廣場，幾十隻喪屍正隨著壞掉的音響節奏晃動，彷彿在跳廣場舞。它們數量龐大，但動作似乎有規律。", opts: [{t:"關掉音響", type:'good', stat:'a'}, {t:"混入其中通過", type:'bad', stat:'w'}] },
-                { q: "音響突然切換成重金屬音樂，喪屍群瞬間狂暴！你處於屍潮中心，四面八方都是敵人。", opts: [{t:"爬上雕像", type:'good', stat:'a'}, {t:"使用手榴彈", type:'bad', stat:'s'}] }
-            ]
-        }
-    ],
-    "銀行": [
-        {
-            t: "金庫的時間鎖",
-            s: [
-                { q: "地下金庫的大門緊閉，時間鎖顯示還有5分鐘開啟。這可能是自動程序，也可能是陷阱。周圍非常安靜。", opts: [{t:"等待開啟", type:'good', stat:'w'}, {t:"嘗試鑽孔", type:'bad', stat:'i'}] },
-                { q: "時間到，門開了，但裡面沒有黃金，只有一隻被關了很久的飢餓屍王。它因為長期沒有進食而變得乾癟但極度敏捷。", opts: [{t:"利用門框卡住它", type:'good', stat:'i'}, {t:"正面迎擊", type:'bad', stat:'s'}] }
-            ]
-        },
-        {
-            t: "運鈔車",
-            s: [
-                { q: "一輛運鈔車撞在柱子上，後門半開。地上散落著鈔票，在這個時代一文不值。但車裡可能有散彈槍和防彈衣。", opts: [{t:"小心偵查車內", type:'good', stat:'i'}, {t:"直接搜刮", type:'bad', stat:'luck'}] },
-                { q: "車裡的押運員變成了喪屍，穿著厚重的全身防爆服，你的普通攻擊對他無效。他舉起防暴槍向你盲射。", opts: [{t:"尋找盔甲縫隙", type:'good', stat:'a'}, {t:"搶奪防暴槍", type:'bad', stat:'s'}] }
-            ]
-        },
-        {
-            t: "經理的密室",
-            s: [
-                { q: "銀行經理的辦公室有一幅奇怪的畫，後面隱藏著密室。密室裡不僅有珠寶，還有一台運作中的電腦，似乎記錄著客戶的秘密。", opts: [{t:"駭入電腦", type:'good', stat:'i'}, {t:"只拿珠寶", type:'bad', stat:'luck'}] },
-                { q: "電腦啟動了防禦系統，激光網封鎖了出口，通風口釋放神經毒氣。你必須在系統重啟前解開邏輯謎題。", opts: [{t:"冷靜解謎", type:'good', stat:'i'}, {t:"暴力破壞電源", type:'bad', stat:'s'}] }
-            ]
-        },
-        {
-            t: "大廳的吊燈",
-            s: [
-                { q: "銀行大廳奢華的水晶吊燈搖搖欲墜，正下方聚集著一群喪屍。如果能射斷繩索，就能一次性解決它們並搜刮屍體。", opts: [{t:"精準射擊繩索", type:'good', stat:'a'}, {t:"投擲重物砸落", type:'bad', stat:'s'}] },
-                { q: "吊燈砸偏了！巨響驚動了二樓的變異體，它們紛紛跳下來，將你包圍。你失去了一次完美的伏擊機會。", opts: [{t:"退守櫃台", type:'good', stat:'w'}, {t:"殺出重圍", type:'bad', stat:'s'}] }
-            ]
-        },
-        {
-            t: "人質紙條",
-            s: [
-                { q: "櫃台上有一張匆忙寫下的紙條：『我們躲在3號保險箱裡，救命！』紙條上有血手印。這可能是很久以前留下的。", opts: [{t:"前往3號保險箱", type:'good', stat:'w'}, {t:"無視並離開", type:'bad', stat:'i'}] },
-                { q: "打開3號箱，裡面並沒有人，只有一顆定時炸彈和一張笑臉面具。這是『小丑皇』幫派留下的惡作劇陷阱！", opts: [{t:"把炸彈扔遠", type:'good', stat:'s'}, {t:"尋找掩體臥倒", type:'bad', stat:'a'}] }
-            ]
-        }
-    ],
-    "下水道": [
-        {
-            t: "鱷魚傳說",
-            s: [
-                { q: "下水道的污水裡有巨大的波紋。都市傳說衝進下水道的鱷魚長大了，看來是真的。水面上露出一雙冰冷的黃色眼睛。", opts: [{t:"爬上管道高處", type:'good', stat:'a'}, {t:"準備戰鬥", type:'bad', stat:'s'}] },
-                { q: "那不是鱷魚，是無數隻變異老鼠組成的『鼠王』球體，在水面上滾動。它們一哄而散，像潮水一樣向你湧來。", opts: [{t:"使用火焰噴射", type:'good', stat:'i'}, {t:"快速撤退", type:'bad', stat:'a'}] }
-            ]
-        },
-        {
-            t: "維修工的遺產",
-            s: [
-                { q: "一個維修工的工具箱漂浮在水面上，旁邊還有一具穿著工裝的浮屍。屍體身上似乎有下水道的地圖。", opts: [{t:"撈取地圖", type:'good', stat:'luck'}, {t:"用鉤子勾過來", type:'bad', stat:'i'}] },
-                { q: "屍體突然抓住你的手！它是一隻『水鬼』變異體，力氣極大，試圖把你拉進充滿病毒的污水裡淹死。", opts: [{t:"斷臂求生", type:'good', stat:'w'}, {t:"反向拉扯", type:'bad', stat:'s'}] }
-            ]
-        },
-        {
-            t: "劇毒沼氣",
-            s: [
-                { q: "前方管道充滿了黃色的霧氣，空氣檢測儀瘋狂報警。沼氣濃度極高，任何火花都會引發大爆炸。", opts: [{t:"屏住呼吸穿過", type:'good', stat:'w'}, {t:"尋找閥門關閉", type:'bad', stat:'i'}] },
-                { q: "一隻帶火星的喪屍（燃燒者）正蹣跚走來！如果它走進沼氣區，大家都會完蛋。你必須在遠處無聲地解決它。", opts: [{t:"使用消音武器", type:'good', stat:'a'}, {t:"用水澆滅它", type:'bad', stat:'i'}] }
-            ]
-        },
-        {
-            t: "地下避難所",
-            s: [
-                { q: "你發現了一個封死的圓形艙門，上面寫著『私人避難所』。這可能是有錢人建的，裡面物資肯定很豐富。", opts: [{t:"破解電子鎖", type:'good', stat:'i'}, {t:"炸開艙門", type:'bad', stat:'s'}] },
-                { q: "艙門打開，裡面沒有活人，只有成堆的白骨和牆上的絕筆『水沒了』。但你也喚醒了沉睡在裡面的孢子真菌。", opts: [{t:"只拿密封罐頭", type:'good', stat:'i'}, {t:"快速搜刮離開", type:'bad', stat:'a'}] }
-            ]
-        },
-        {
-            t: "黏液巢穴",
-            s: [
-                { q: "牆壁上覆蓋著厚厚的粘液，這裡顯然是某種生物的巢穴。粘液裡包裹著各種發光的物品，可能是之前的冒險者留下的。", opts: [{t:"割開粘液取物", type:'good', stat:'a'}, {t:"用火燒", type:'bad', stat:'i'}] },
-                { q: "粘液具有強酸性！你的武器被腐蝕了。巢穴的主人——一隻巨大的變異蛞蝓從天花板上掉下來，試圖溶解你。", opts: [{t:"撒鹽/脫水劑", type:'good', stat:'i'}, {t:"攻擊它的觸角", type:'bad', stat:'a'}] }
-            ]
-        }
-    ],
-    "電子城": [
-        {
-            t: "全息影像陷阱",
-            s: [
-                { q: "一家店鋪門口站著一個美女全息投影，正在招攬客人。這在末世顯得格外詭異，但店鋪裡面閃爍著高級顯卡的RGB光芒。", opts: [{t:"尋找投影源", type:'good', stat:'i'}, {t:"直接進店", type:'bad', stat:'luck'}] },
-                { q: "剛進店，捲簾門落下。這是一個全自動防禦系統，地上的掃地機器人改裝成了自爆地雷，向你駛來。", opts: [{t:"駭入控制系統", type:'good', stat:'i'}, {t:"跳上高處躲避", type:'bad', stat:'a'}] }
-            ]
-        },
-        {
-            t: "電池山",
-            s: [
-                { q: "這裡堆積了成千上萬顆廢舊電池，形成了一座小山。空氣中充滿了金屬味。如果你能提煉其中的鋰，將是大筆財富。", opts: [{t:"篩選可用電池", type:'good', stat:'i'}, {t:"整箱搬走", type:'bad', stat:'s'}] },
-                { q: "電池山並不穩定，突然發生了連鎖短路反應，開始起火爆炸。你處於爆炸中心，周圍是飛濺的高溫酸液。", opts: [{t:"尋找掩體", type:'good', stat:'luck'}, {t:"衝出火海", type:'bad', stat:'a'}] }
-            ]
-        },
-        {
-            t: "電競椅王座",
-            s: [
-                { q: "在電競館中央，一具乾屍坐在豪華電競椅上，戴著VR眼鏡。他的手裡緊緊抓著一個硬碟，可能是比特幣錢包。", opts: [{t:"取下硬碟", type:'good', stat:'luck'}, {t:"檢查周圍", type:'bad', stat:'i'}] },
-                { q: "當你觸碰硬碟時，VR系統啟動了外部音響，播放巨大的遊戲音效。周圍休眠的喪屍全部被喚醒，這是一場『真人吃雞』。", opts: [{t:"據守電競館", type:'good', stat:'s'}, {t:"逃離電子城", type:'bad', stat:'a'}] }
-            ]
-        },
-        {
-            t: "無人機蜂群",
-            s: [
-                { q: "天空中傳來嗡嗡聲，一群失控的民用無人機正在巡邏。它們雖然沒有武裝，但會撞擊任何移動物體並發出警報。", opts: [{t:"干擾信號", type:'good', stat:'i'}, {t:"躲在陰影處", type:'bad', stat:'a'}] },
-                { q: "一架無人機發現了你，它發出刺耳的警報，並自殺式撞向你的頭部，螺旋槳像刀片一樣鋒利。", opts: [{t:"用球棒擊落", type:'good', stat:'a'}, {t:"用厚衣物防禦", type:'bad', stat:'s'}] }
-            ]
-        },
-        {
-            t: "服務器機房",
-            s: [
-                { q: "這裡曾是數據中心，機房溫度極低。如果你能重啟服務器，或許能下載到戰前的地圖數據或科技藍圖。", opts: [{t:"修復備用電源", type:'good', stat:'i'}, {t:"尋找紙質資料", type:'bad', stat:'luck'}] },
-                { q: "冷卻系統故障，液氮洩漏！整個房間瞬間變成了冰窟。一隻長期躲在這裡的『冰霜爬行者』甦醒了，它能在牆上結冰行走。", opts: [{t:"利用高溫攻擊", type:'good', stat:'i'}, {t:"打碎它的冰甲", type:'bad', stat:'s'}] }
-            ]
-        }
-    ],
-    "健身房": [
-        {
-            t: "跑步機耐力賽",
-            s: [
-                { q: "健身房的門被鎖死了，唯一的入口是一排改裝過的跑步機。似乎必須在上面跑出足夠的速度，門才會打開。這是一個殘酷的考驗。", opts: [{t:"接受挑戰", type:'good', stat:'s'}, {t:"尋找控制面板", type:'bad', stat:'i'}] },
-                { q: "你跑到一半，跑步機速度突然飆升到極限，並且後方伸出了尖刺滾輪。如果你停下來就會被絞碎，體力在飛速流逝。", opts: [{t:"堅持到底", type:'good', stat:'s'}, {t:"跳到旁邊機器", type:'bad', stat:'a'}] }
-            ]
-        },
-        {
-            t: "蛋白粉巨人",
-            s: [
-                { q: "在自由重量區，一隻體型誇張的喪屍正在舉著槓鈴。它的肌肉膨脹到甚至撕裂了皮膚，顯然生前過度攝入藥物。", opts: [{t:"悄悄繞過", type:'good', stat:'a'}, {t:"設置絆索", type:'bad', stat:'i'}] },
-                { q: "巨人發現了你，直接將幾百公斤的槓鈴像標槍一樣投擲過來！地面被砸出大坑。它咆哮著衝鋒，像一輛坦克。", opts: [{t:"攻擊膝蓋", type:'good', stat:'a'}, {t:"引導它撞牆", type:'bad', stat:'i'}] }
-            ]
-        },
-        {
-            t: "瑜伽室的鏡子",
-            s: [
-                { q: "瑜伽室四面都是鏡子，地上鋪滿了瑜伽墊。這裡異常安靜，但你總覺得有什麼柔軟的東西在天花板上蠕動。", opts: [{t:"抬頭觀察", type:'good', stat:'i'}, {t:"快速通過", type:'bad', stat:'a'}] },
-                { q: "是一隻『軟骨屍』！它的骨頭全部軟化，可以像蛇一樣扭曲身體。它從天花板無聲地垂下來，試圖勒住你的脖子。", opts: [{t:"用利刃切割", type:'good', stat:'a'}, {t:"掙脫束縛", type:'bad', stat:'s'}] }
-            ]
-        },
-        {
-            t: "桑拿房陷阱",
-            s: [
-                { q: "更衣室後的桑拿房門虛掩著，裡面透出熱氣。可能是供暖系統故障，也可能是有人故意加熱。", opts: [{t:"檢查溫控器", type:'good', stat:'i'}, {t:"直接進入", type:'bad', stat:'luck'}] },
-                { q: "門突然鎖死，溫度急劇上升。這是一個蒸籠陷阱！視線模糊，脫水症狀出現。你必須在被煮熟前打破強化玻璃門。", opts: [{t:"用濕毛巾摀口鼻", type:'good', stat:'w'}, {t:"全力撞擊玻璃", type:'bad', stat:'s'}] }
-            ]
-        },
-        {
-            t: "拳擊擂台",
-            s: [
-                { q: "拳擊台上躺著一個冠軍腰帶，金光閃閃。但在擂台周圍，圍著一圈喪屍觀眾，它們似乎在等待挑戰者上台。", opts: [{t:"跳上擂台", type:'good', stat:'s'}, {t:"從觀眾席殺過去", type:'bad', stat:'a'}] },
-                { q: "剛上台，一個戴著拳套的『拳王屍』就跳了上來。根據規則，喪屍群不會攻擊擂台上的人，你必須單挑打贏它。", opts: [{t:"格擋反擊", type:'good', stat:'s'}, {t:"游擊戰術", type:'bad', stat:'a'}] }
-            ]
-        }
-    ],
-    "學校": [
-        {
-            t: "化學實驗室",
-            s: [
-                { q: "實驗室裡五顏六色的藥水瓶還在冒泡。黑板上寫著一個化學方程式，似乎是某種強力炸藥的配方。但幾瓶試劑已經很不穩定了。", opts: [{t:"嘗試調配炸藥", type:'good', stat:'i'}, {t:"收集安全試劑", type:'bad', stat:'luck'}] },
-                { q: "操作失誤！試劑瓶開始劇烈震動，冒出紫煙。這是化學反應失控的前兆，爆炸範圍將覆蓋整個教室。", opts: [{t:"將試劑扔出窗外", type:'good', stat:'s'}, {t:"躲到實驗桌下", type:'bad', stat:'a'}] }
-            ]
-        },
-        {
-            t: "圖書館的低語",
-            s: [
-                { q: "圖書館裡十分安靜，只有翻書的聲音。一個穿著校服的『閱讀者』喪屍正坐在地上看書，它的周圍堆滿了書牆。", opts: [{t:"從書架頂端接近", type:'good', stat:'a'}, {t:"發出聲音引誘", type:'bad', stat:'luck'}] },
-                { q: "它抬起頭，沒有眼睛，只有一張巨大的嘴。它發出尖叫，聲波震碎了周圍的玻璃，書架紛紛倒塌壓向你。", opts: [{t:"尋找三角區躲避", type:'good', stat:'i'}, {t:"推開書架", type:'bad', stat:'s'}] }
-            ]
-        },
-        {
-            t: "校長室的廣播",
-            s: [
-                { q: "校園廣播突然響起，播放著校長的演講錄音，聲音斷斷續續。這聲音吸引了操場上所有的喪屍往行政樓聚集。", opts: [{t:"切斷廣播線路", type:'good', stat:'i'}, {t:"趁亂逃離", type:'bad', stat:'a'}] },
-                { q: "你在校長室發現了廣播源，還有被綁在椅子上的校長（已變異）。他掙脫了繩子，同時門外湧入了大量喪屍學生。", opts: [{t:"跳窗逃生", type:'good', stat:'a'}, {t:"據守辦公室", type:'bad', stat:'s'}] }
-            ]
-        },
-        {
-            t: "食堂的泔水桶",
-            s: [
-                { q: "食堂散發著難以形容的惡臭。泔水桶巨大無比，裡面似乎有東西在攪動。傳說食堂大媽養了一隻『寵物』在裡面。", opts: [{t:"遠離泔水桶", type:'good', stat:'w'}, {t:"投擲燃燒瓶", type:'bad', stat:'i'}] },
-                { q: "一隻巨大的變異豬從泔水桶裡衝出來，它吃光了所有的剩飯和屍體，皮糙肉厚，獠牙能頂穿鋼板。它在食堂裡橫衝直撞。", opts: [{t:"利用柱子卡位", type:'good', stat:'a'}, {t:"攻擊它的腹部", type:'bad', stat:'s'}] }
-            ]
-        },
-        {
-            t: "音樂室的鋼琴",
-            s: [
-                { q: "音樂室裡，一架鋼琴自動彈奏著貝多芬的月光奏鳴曲。這場景美得詭異。鋼琴蓋下可能藏著物資，也可能是陷阱。", opts: [{t:"檢查鋼琴", type:'good', stat:'i'}, {t:"破壞鋼琴", type:'bad', stat:'s'}] },
-                { q: "鋼琴線突然彈射出來，試圖切割你的手指！這是一個精密的機械陷阱。同時，音樂的高潮部分喚醒了隔壁的『合唱團』屍群。", opts: [{t:"斬斷鋼琴線", type:'good', stat:'s'}, {t:"封鎖房門", type:'bad', stat:'s'}] }
-            ]
-        }
-    ]
-};
 
 // 修改：在 storyState 中記錄地點名稱 (loc)，以便結算時發放對應獎勵
 function triggerLocationEvent(locName) {
@@ -2085,36 +1026,6 @@ function finishStory() {
     showLootModal(item, rewardType, campPhase);
 }// ==================== UI 與 輔助函數 ====================
 
-// ========== 屬性計算邏輯 (合併) ==========
-function getStat(k) {
-    let base = G.stats[k] || 0;
-    if (k === 'luck') base = G.luck; 
-    if (k === 'moral') return G.moral;
-    if (k === 'luck' && G.eq.acc) base += G.eq.acc.val;
-
-    if (G.job.passive === 'dealer_luck' && ['s','a','i','w','luck'].includes(k)) base += 5;
-    if (G.job.passive === 'depress_stat' && ['s','a','i','w'].includes(k)) base = Math.floor(base * 1.5);
-    if (G.job.passive === 'high_dodge' && ['s','a','i','w'].includes(k)) base = Math.floor(base * 0.5);
-
-    if(G.flags.depression && ['s','a','i','w'].includes(k)) base = Math.floor(base/2);
-    
-    for(let slot in G.eq) if(G.eq[slot]?.stats?.[k]) base += G.eq[slot].stats[k];
-    
-    if(G.combat && G.combat.buffs) {
-        if(G.combat.buffs.allUp && ['s','a','i','w'].includes(k)) base = Math.floor(base * 1.5); 
-        if(G.combat.buffs.dlss && k === 'a') base = Math.floor(base * 1.5);
-        if(G.combat.buffs.redbull && k === 'a') base = Math.floor(base * 1.3);
-        if(G.combat.buffs.dance === 'Pete' && ['s','a','i','w'].includes(k)) base = Math.floor(base * 1.1);
-        if(G.combat.buffs.zombie === 'Green' && k === 's') base = Math.floor(base * 1.2);
-        if(G.combat.buffs.zombie === 'Hair' && k === 's') base = Math.floor(base * 1.5);
-        if(G.combat.buffs.zombie === 'Fly' && k === 's') base = Math.floor(base * 2.0);
-        if(G.combat.buffs.zombie === 'Purple' && k === 's') base = Math.floor(base * 0.8);
-        if(G.combat.buffs.zombie === 'White' && k === 's') base = Math.floor(base * 0.9);
-        if(G.combat.buffs.taoistAtk && k === 's') base = Math.floor(base * (1 + G.combat.buffs.taoistAtk));
-    }
-    return base;
-}
-
 function calcDerivedStats() {
     let s = getStat('s'), a = getStat('a'), i = getStat('i'), w = getStat('w'), l = getStat('luck');
     
@@ -2245,7 +1156,7 @@ function exploreSetup() {
     html += `</div>`;
     document.getElementById('action-area').innerHTML = html;
 }
-
+window.exploreSetup = exploreSetup;
 function triggerExplore(index) {
     let l = window.currentLocs[index];
     explore(l.n, l.d, l.l, l.desc);
@@ -3493,6 +2404,7 @@ function showPlotDialog(day, callback) {
     openModal(`📜 主線劇情 (Day ${day})`, `<div class="story-text main-story-text">${text}</div>`, `<button onclick="closePlotDialog()">繼續</button>`);
 }
 function closePlotDialog() { closeModal(); if(G.dialogCallback) G.dialogCallback(); }
+
 function openModal(title, content, btns) {
     document.getElementById('m-title').innerHTML = title;
     document.getElementById('m-desc').innerHTML = content;
@@ -3719,12 +2631,7 @@ function getStat(k) {
     let base = G.stats[k] || 0;
     if (k === 'luck') base = G.luck; 
     if (k === 'moral') return G.moral;
-    
-    // 修改：使用 getEquipVal 計算飾品提供的屬性 (如 Luck)
     if (k === 'luck' && G.eq.acc) {
-        // 注意：我們之前的 COMMON_DB 設定 luck 在 stats 裡，不在 val 裡
-        // 但如果有裝備直接加 luck (如 val 就是 luck)，這裡需要調整
-        // 目前 COMMON_DB 中，acc 的 val 雖然顯示數值，但具體效果看 stats
     }
 
     if (G.job.passive === 'dealer_luck' && ['s','a','i','w','luck'].includes(k)) base += 5;
@@ -3733,22 +2640,18 @@ function getStat(k) {
 
     if(G.flags.depression && ['s','a','i','w'].includes(k)) base = Math.floor(base/2);
     
-    // 遍歷裝備屬性
     for(let slot in G.eq) {
         let item = G.eq[slot];
         if(item && item.stats && item.stats[k]) {
             let add = item.stats[k];
-            // 如果是職業專屬，屬性也 +10% (可選，這裡僅讓主數值+10%比較簡單，但全加也行)
             if(item.isJobNative) add = Math.floor(add * 1.1);
             base += add;
         }
-        // 特殊：Tier 5 飾品 'all' 加成
         if(item && item.stats && item.stats.all && ['s','a','i','w','luck'].includes(k)) {
              base += item.stats.all;
         }
     }
     
-    // ... (戰鬥 Buff 計算保持不變) ...
     if(G.combat && G.combat.buffs) {
         if(G.combat.buffs.allUp && ['s','a','i','w'].includes(k)) base = Math.floor(base * 1.5); 
         if(G.combat.buffs.dlss && k === 'a') base = Math.floor(base * 1.5);
@@ -4334,6 +3237,37 @@ function recycleLoot() {
     if(G.tempLoot.cb) G.tempLoot.cb();
 }
 
-</script>
-</body>
-</html>
+// Export all functions to window at once
+const globalFunctions = {
+    startGame,
+    closeModal,
+    manualRefreshShop,
+    closePlotDialog,
+    startJourney,
+    triggerExplore,
+    showItemDetail,
+    recycleLoot,
+    sellBagItem,
+    buyShopItem,
+    openShop,
+    takeItemToBag,
+    discardBagItem,
+    useLootItemDirectly,
+    equipLoot,
+    useCombatItem,
+    openCombatBag,
+    combatRound,
+    abandonQuest,
+    acceptQuest,
+    rewindTime,
+    discardLoot,
+    showQuestDetail,
+    showStats,
+    storyChoose,
+    campAction,
+    equipFromBag,
+    discardCampItem,
+    useCampItem,
+};
+
+Object.assign(window, globalFunctions);
