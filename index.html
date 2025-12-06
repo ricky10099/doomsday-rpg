@@ -7,9 +7,9 @@
     <link rel="stylesheet" href="style.css" />
 </head>
 <body>
-    <div id="game-container">
+    <div id="game-container" style="display:none">
         <div id="weather-bar">
-            <span><span id="w-icon">☀️</span> <span id="w-text">晴朗</span></span>
+            <span id="w-text">☀️ 晴朗</span></span>
             <button id="quest-btn" type="button" onclick="showQuestDetail()">📜 任務資訊</button>
             <span><span id="v-job" style="color:var(--r-rare)"></span> / <span id="v-mbti" class="c-mbti"></span> <span id="v-status-extra" style="color:#f44"></span></span>
         </div>
@@ -22,7 +22,7 @@
                 <div class="stat-box"><span class="stat-lbl">SAN</span><span class="stat-val" style="color:var(--san-color)" id="v-san">100</span></div>
                 <div class="stat-box" onclick="showStats()"><span class="stat-lbl">Lv. <span id="v-lvl" style="color:#fff">1</span></span><span class="stat-val" id="v-stats">屬性</span></div>
                 <div class="stat-box"><span class="stat-lbl">XP</span><span class="stat-val" id="v-xp" style="color:var(--xp-color)">0/20</span></div>
-                <div class="stat-box"><span class="stat-lbl">物資</span><span class="stat-val"><span id="v-food">100</span>/<span id="v-water">100</span></span></div>
+                <div class="stat-box"><span class="stat-lbl">物資</span><span class="stat-val"><span id="v-food-icon">🍖</span><span id="v-food">100</span>/<span id="v-water-icon">💧</span><span id="v-water">100</span></span></div>
                 <div class="stat-box"><span class="stat-lbl">💰 金錢</span><span class="stat-val" id="v-money" style="color:#ffd700">0</span></div>
             </div>
         </div>
@@ -52,7 +52,7 @@
     </div>
 
     <!-- Modal -->
-    <div id="screen-modal" class="overlay" style="display:none" onclick="">
+    <div id="screen-modal" class="overlay" style="display:none" >
         <div id="modal-content" onclick="event.stopPropagation()">
             <h2 id="m-title" style="margin:0 0 10px 0; color:#fff"></h2>
             <div id="m-desc" style="color:#ccc; line-height:1.6; font-size:0.95em"></div>

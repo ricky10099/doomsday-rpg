@@ -13,6 +13,18 @@ import ALL_JOBS from './data/ALL_JOBS.json' with  { type: "json" };
 import QUEST_DB from './data/QUEST_DB.json' with  { type: "json" };
 import LOCATIONS from './data/LOCATIONS.json' with  { type: "json" };
 import LOC_EVENT_DB from './data/LOCATIONS.json' with  { type: "json" };
+// ==================== 怪物資料庫擴充 ====================
+// 1. 普通怪物庫 (50種, 10 per Tier)
+// 結構: { n:名字, hp:基數, atk:基數, desc:描述, tier:等級 }
+import NORMAL_ENEMIES from './data/NORMAL_ENEMIES.json' with  { type: "json" };
+// 2. 精英怪物庫 (20種, 4 per Tier) - 具備獨特技能
+import ELITE_ENEMIES from './data/ELITE_ENEMIES.json' with  { type: "json" };
+// 3. 地點專屬 Boss (12地點 x 5 Tier = 60 Bosses)
+// 每個 Boss 至少 2 個技能
+import LOCATION_BOSSES from './data/LOCATION_BOSSES.json' with  { type: "json" };
+
+import SKILLS from './data/SKILLS.json' with  { type: "json" };
+import MAIN_PLOT from './data/MAIN_PLOT.json' with  { type: "json" };
 
 const STAT_MAP = { 
     s:'力量',
@@ -71,230 +83,6 @@ function triggerLocationEvent(locName) {
     log('奇遇', `觸發事件：${ev.t}`, 'c-epic');
     renderStoryModal();
 }
-
-// ==================== 怪物資料庫擴充 ====================
-
-// 1. 普通怪物庫 (50種, 10 per Tier)
-// 結構: { n:名字, hp:基數, atk:基數, desc:描述, tier:等級 }
-const NORMAL_ENEMIES = {
-    1: [
-        {n:'流浪餓犬', hp:30, atk:8}, {n:'蹣跚感染者', hp:35, atk:10}, {n:'拾荒暴徒', hp:40, atk:12}, 
-        {n:'失智老人', hp:25, atk:8}, {n:'變異老鼠', hp:20, atk:15}, {n:'剛變異的鄰居', hp:35, atk:10},
-        {n:'發狂的醉漢', hp:45, atk:14}, {n:'腐爛的鴿群', hp:25, atk:12}, {n:'迷路的遊客', hp:30, atk:9}, {n:'超市搶匪', hp:40, atk:13}
-    ],
-    2: [
-        {n:'下水道爬行者', hp:60, atk:20}, {n:'尖刺狂奔者', hp:55, atk:25}, {n:'腫脹屍', hp:80, atk:18},
-        {n:'雙頭犬', hp:65, atk:22}, {n:'持棍暴徒', hp:70, atk:20}, {n:'孢子感染者', hp:60, atk:15},
-        {n:'變異警衛', hp:75, atk:22}, {n:'酸液吐者', hp:50, atk:28}, {n:'利爪喪屍', hp:65, atk:26}, {n:'硬皮喪屍', hp:90, atk:15}
-    ],
-    3: [
-        {n:'防暴喪屍', hp:120, atk:30}, {n:'骨刃獵手', hp:100, atk:40}, {n:'武裝掠奪者', hp:110, atk:35},
-        {n:'變異大猩猩', hp:150, atk:45}, {n:'共生體喪屍', hp:130, atk:32}, {n:'信號干擾者', hp:90, atk:25},
-        {n:'狂暴騎手', hp:110, atk:38}, {n:'隱形潛伏者', hp:80, atk:50}, {n:'重甲傭兵', hp:140, atk:35}, {n:'鏈鋸狂人', hp:125, atk:42}
-    ],
-    4: [
-        {n:'半機械喪屍', hp:200, atk:55}, {n:'等離子幽靈', hp:160, atk:70}, {n:'納米感染體', hp:180, atk:60},
-        {n:'輻射巨獸', hp:250, atk:65}, {n:'虛空之影', hp:150, atk:80}, {n:'心靈控制者', hp:140, atk:50},
-        {n:'重力扭曲者', hp:170, atk:65}, {n:'生化改造兵', hp:220, atk:58}, {n:'水晶外殼屍', hp:300, atk:45}, {n:'音波尖嘯者', hp:160, atk:75}
-    ],
-    5: [
-        {n:'崩壞裂解者', hp:350, atk:90}, {n:'維度吞噬者', hp:400, atk:100}, {n:'恆星之子', hp:380, atk:110},
-        {n:'熵增熵減', hp:360, atk:95}, {n:'時間錯位體', hp:320, atk:120}, {n:'反物質幽靈', hp:300, atk:130},
-        {n:'規則破壞者', hp:450, atk:85}, {n:'終焉使徒', hp:420, atk:105}, {n:'黑洞寄生體', hp:500, atk:90}, {n:'神之棄子', hp:480, atk:100}
-    ]
-};
-
-// 2. 精英怪物庫 (20種, 4 per Tier) - 具備獨特技能
-const ELITE_ENEMIES = {
-    1: [
-        {n:'垃圾山之王', hp:80, atk:15, sks:[{n:'垃圾投擲', eff:'stun', rate:0.3}]},
-        {n:'午夜嚎叫者', hp:60, atk:25, sks:[{n:'恐懼尖叫', eff:'atk_down', rate:0.4}]},
-        {n:'霓虹飛車黨', hp:70, atk:20, sks:[{n:'高速撞擊', eff:'double_hit', rate:0.3}]},
-        {n:'人肉屠夫', hp:90, atk:18, sks:[{n:'剁肉', eff:'bleed', rate:0.4}]}
-    ],
-    2: [
-        {n:'孢子母體', hp:150, atk:25, sks:[{n:'毒霧擴散', eff:'poison', rate:0.4}]},
-        {n:'高壓電工', hp:120, atk:35, sks:[{n:'過載電擊', eff:'stun', rate:0.3}]},
-        {n:'水泥巨像', hp:200, atk:20, sks:[{n:'硬化防禦', eff:'def_up', rate:0.5}]},
-        {n:'鏡中人', hp:100, atk:40, sks:[{n:'鏡像複製', eff:'dodge_up', rate:0.4}]}
-    ],
-    3: [
-        {n:'數據幽靈', hp:220, atk:45, sks:[{n:'防火牆', eff:'shield', rate:0.3}]},
-        {n:'精準外科醫', hp:180, atk:60, sks:[{n:'手術刀暴擊', eff:'crit', rate:0.4}]},
-        {n:'痛苦收割者', hp:250, atk:50, sks:[{n:'靈魂收割', eff:'heal_self', rate:0.3}]},
-        {n:'重力操控師', hp:200, atk:55, sks:[{n:'重力壓制', eff:'acc_down', rate:0.4}]}
-    ],
-    4: [
-        {n:'核心反應堆', hp:400, atk:70, sks:[{n:'輻射脈衝', eff:'burn', rate:0.5}]},
-        {n:'時空跳躍者', hp:300, atk:90, sks:[{n:'時間回溯', eff:'heal_self', rate:0.2}]},
-        {n:'納米雲團', hp:350, atk:60, sks:[{n:'分解', eff:'def_down', rate:0.5}]},
-        {n:'絕對沉默者', hp:320, atk:100, sks:[{n:'靜默', eff:'silence', rate:1.0}]} // 必中封印
-    ],
-    5: [
-        {n:'熵之騎士', hp:600, atk:120, sks:[{n:'無序打擊', eff:'random_debuff', rate:0.4}]},
-        {n:'黑洞化身', hp:800, atk:150, sks:[{n:'視界吞噬', eff:'hp_halve', rate:0.2}]}, // 血量減半
-        {n:'代碼篡改者', hp:500, atk:110, sks:[{n:'GM權限', eff:'stun', rate:0.5}]},
-        {n:'被遺忘的古神', hp:999, atk:100, sks:[{n:'精神污染', eff:'san_dmg', rate:0.4}]}
-    ]
-};
-
-// 3. 地點專屬 Boss (12地點 x 5 Tier = 60 Bosses)
-// 每個 Boss 至少 2 個技能
-const LOCATION_BOSSES = {
-    "廢棄超市": [
-        {t:1, n:'過期食品管理員', hp:150, atk:20, sks:[{n:'腐爛投擲', eff:'poison'}, {n:'推倒貨架', eff:'stun'}]},
-        {t:2, n:'冷凍庫巨怪', hp:300, atk:40, sks:[{n:'極寒吐息', eff:'stun'}, {n:'冰甲', eff:'def_up'}]},
-        {t:3, n:'貪食者', hp:600, atk:70, sks:[{n:'吞噬', eff:'heal_self'}, {n:'胃酸噴射', eff:'burn'}]},
-        {t:4, n:'條碼掃描機甲', hp:1000, atk:110, sks:[{n:'雷射掃描', eff:'crit'}, {n:'價格計算', eff:'def_down'}]},
-        {t:5, n:'消費主義之神', hp:2000, atk:180, sks:[{n:'清倉大拍賣', eff:'aoe'}, {n:'通脹', eff:'hp_halve'}]}
-    ],
-    "五金店": [
-        {t:1, n:'瘋狂裝修工', hp:160, atk:22, sks:[{n:'釘槍連射', eff:'bleed'}, {n:'大鎚碎顱', eff:'crit'}]},
-        {t:2, n:'電鋸殺人狂', hp:320, atk:45, sks:[{n:'肢解', eff:'bleed'}, {n:'燃油補充', eff:'atk_up'}]},
-        {t:3, n:'鋼鐵魔像', hp:700, atk:60, sks:[{n:'鐵壁', eff:'shield'}, {n:'地震波', eff:'stun'}]},
-        {t:4, n:'自動化砲台王', hp:1100, atk:100, sks:[{n:'鎖定目標', eff:'acc_up'}, {n:'彈幕', eff:'double_hit'}]},
-        {t:5, n:'萬機之父', hp:2200, atk:170, sks:[{n:'重組', eff:'heal_self'}, {n:'機械降神', eff:'kill'}]}
-    ],
-    "診所": [
-        {t:1, n:'實習醫生', hp:140, atk:18, sks:[{n:'錯誤處方', eff:'poison'}, {n:'鎮靜劑', eff:'sleep'}]},
-        {t:2, n:'染血護士長', hp:280, atk:38, sks:[{n:'抽血', eff:'heal_self'}, {n:'巨大的針筒', eff:'crit'}]},
-        {t:3, n:'外科屠夫', hp:650, atk:65, sks:[{n:'麻醉氣體', eff:'sleep'}, {n:'精準切割', eff:'bleed'}]},
-        {t:4, n:'生化實驗體0號', hp:1200, atk:90, sks:[{n:'病毒爆發', eff:'poison_aoe'}, {n:'再生', eff:'heal_self'}]},
-        {t:5, n:'院長 (病毒本體)', hp:2100, atk:160, sks:[{n:'基因改寫', eff:'random_debuff'}, {n:'生命汲取', eff:'hp_halve'}]}
-    ],
-    "民居": [
-        {t:1, n:'家暴男', hp:130, atk:25, sks:[{n:'摔酒瓶', eff:'bleed'}, {n:'狂怒', eff:'atk_up'}]},
-        {t:2, n:'閣樓的怨靈', hp:260, atk:40, sks:[{n:'尖嘯', eff:'san_dmg'}, {n:'穿牆', eff:'dodge_up'}]},
-        {t:3, n:'囤積癖巨人', hp:600, atk:60, sks:[{n:'垃圾雪崩', eff:'stun'}, {n:'雜物盾', eff:'shield'}]},
-        {t:4, n:'智能管家(失控)', hp:1000, atk:95, sks:[{n:'關閉氧氣', eff:'poison'}, {n:'防盜電擊', eff:'stun'}]},
-        {t:5, n:'孤獨死集合體', hp:2000, atk:150, sks:[{n:'絕望靈氣', eff:'san_dmg'}, {n:'同化', eff:'stun'}]}
-    ],
-    "警局分局": [
-        {t:1, n:'腐敗菜鳥', hp:160, atk:20, sks:[{n:'警棍重擊', eff:'stun'}, {n:'呼叫支援', eff:'def_up'}]},
-        {t:2, n:'K9警犬王', hp:300, atk:50, sks:[{n:'撕咬喉嚨', eff:'bleed'}, {n:'追蹤', eff:'acc_up'}]},
-        {t:3, n:'SWAT隊長', hp:700, atk:70, sks:[{n:'震撼彈', eff:'stun'}, {n:'戰術掃射', eff:'double_hit'}]},
-        {t:4, n:'鎮暴機甲', hp:1300, atk:100, sks:[{n:'催淚瓦斯', eff:'blind'}, {n:'高壓水炮', eff:'stun'}]},
-        {t:5, n:'鐵腕局長', hp:2400, atk:190, sks:[{n:'戒嚴令', eff:'def_up'}, {n:'就地正法', eff:'crit'}]}
-    ],
-    "服裝店": [
-        {t:1, n:'無頭模特', hp:140, atk:18, sks:[{n:'塑料重擊', eff:'stun'}, {n:'假人偽裝', eff:'dodge_up'}]},
-        {t:2, n:'瘋狂裁縫', hp:280, atk:35, sks:[{n:'剪刀衝刺', eff:'bleed'}, {n:'針線縫合', eff:'stun'}]},
-        {t:3, n:'皮革臉', hp:600, atk:65, sks:[{n:'人皮面具', eff:'san_dmg'}, {n:'電鋸狂舞', eff:'aoe'}]},
-        {t:4, n:'鏡像魔女', hp:1000, atk:90, sks:[{n:'鏡像分身', eff:'dodge_up'}, {n:'破碎玻璃', eff:'bleed'}]},
-        {t:5, n:'時尚女魔頭', hp:2000, atk:160, sks:[{n:'致命潮流', eff:'crit'}, {n:'高級定製', eff:'shield'}]}
-    ],
-    "公園": [
-        {t:1, n:'流浪漢皇帝', hp:140, atk:15, sks:[{n:'丟石頭', eff:'stun'}, {n:'惡臭', eff:'poison'}]},
-        {t:2, n:'變異棕熊', hp:350, atk:55, sks:[{n:'熊抱', eff:'stun'}, {n:'撕裂', eff:'bleed'}]},
-        {t:3, n:'植物女王', hp:650, atk:60, sks:[{n:'藤蔓纏繞', eff:'stun'}, {n:'花粉', eff:'sleep'}]},
-        {t:4, n:'噴水池海怪', hp:1100, atk:95, sks:[{n:'水壓衝擊', eff:'stun'}, {n:'觸手鞭打', eff:'double_hit'}]},
-        {t:5, n:'蓋亞化身', hp:2300, atk:170, sks:[{n:'自然復仇', eff:'aoe'}, {n:'大地之盾', eff:'heal_self'}]}
-    ],
-    "銀行": [
-        {t:1, n:'ATM破壞者', hp:160, atk:22, sks:[{n:'鈔票夾擊', eff:'stun'}, {n:'鐵拳', eff:'crit'}]},
-        {t:2, n:'蒙面搶匪首領', hp:320, atk:45, sks:[{n:'霰彈槍轟擊', eff:'aoe'}, {n:'人質盾牌', eff:'def_up'}]},
-        {t:3, n:'高利貸吸血鬼', hp:680, atk:70, sks:[{n:'利滾利', eff:'atk_up'}, {n:'吸血', eff:'heal_self'}]},
-        {t:4, n:'金庫守護者', hp:1400, atk:100, sks:[{n:'鈦合金裝甲', eff:'shield'}, {n:'激光防禦', eff:'burn'}]},
-        {t:5, n:'資本巨鱷', hp:2500, atk:200, sks:[{n:'金融海嘯', eff:'hp_halve'}, {n:'破產清算', eff:'kill'}]}
-    ],
-    "下水道": [
-        {t:1, n:'巨大蟑螂', hp:130, atk:15, sks:[{n:'飛行衝撞', eff:'acc_down'}, {n:'頑強生命', eff:'heal_self'}]},
-        {t:2, n:'污泥怪', hp:300, atk:35, sks:[{n:'包裹', eff:'stun'}, {n:'酸性腐蝕', eff:'def_down'}]},
-        {t:3, n:'鱷魚王', hp:700, atk:65, sks:[{n:'死亡翻滾', eff:'crit'}, {n:'堅硬鱗甲', eff:'def_up'}]},
-        {t:4, n:'鼠疫領主', hp:1100, atk:90, sks:[{n:'黑死病', eff:'poison_aoe'}, {n:'召喚鼠群', eff:'double_hit'}]},
-        {t:5, n:'深淵之物', hp:2200, atk:160, sks:[{n:'凝視深淵', eff:'san_dmg'}, {n:'觸手絞殺', eff:'kill'}]}
-    ],
-    "電子城": [
-        {t:1, n:'漏電的機器人', hp:150, atk:20, sks:[{n:'電火花', eff:'stun'}, {n:'自爆程序', eff:'aoe'}]},
-        {t:2, n:'無人機蜂群', hp:280, atk:40, sks:[{n:'蜂群掃射', eff:'double_hit'}, {n:'空中優勢', eff:'dodge_up'}]},
-        {t:3, n:'VR腦控者', hp:600, atk:75, sks:[{n:'虛擬現實', eff:'sleep'}, {n:'精神衝擊', eff:'san_dmg'}]},
-        {t:4, n:'挖礦機巨獸', hp:1200, atk:100, sks:[{n:'算力過載', eff:'burn'}, {n:'顯卡散熱', eff:'acc_down'}]},
-        {t:5, n:'AI 奇點', hp:2400, atk:190, sks:[{n:'格式化', eff:'hp_halve'}, {n:'天網啟動', eff:'aoe'}]}
-    ],
-    "健身房": [
-        {t:1, n:'跑步機受害者', hp:140, atk:25, sks:[{n:'失控衝撞', eff:'stun'}, {n:'絆倒', eff:'acc_down'}]},
-        {t:2, n:'類固醇狂人', hp:350, atk:50, sks:[{n:'藥物狂暴', eff:'atk_up'}, {n:'重拳', eff:'stun'}]},
-        {t:3, n:'瑜伽大師', hp:650, atk:60, sks:[{n:'極限閃避', eff:'dodge_up'}, {n:'關節技', eff:'stun'}]},
-        {t:4, n:'鐵塊巨人', hp:1300, atk:110, sks:[{n:'槓鈴投擲', eff:'crit'}, {n:'金屬皮膚', eff:'def_up'}]},
-        {t:5, n:'完美肉體', hp:2300, atk:180, sks:[{n:'究極生物', eff:'heal_self'}, {n:'認真一拳', eff:'kill'}]}
-    ],
-    "學校": [
-        {t:1, n:'變異留級生', hp:140, atk:20, sks:[{n:'勒索', eff:'stun'}, {n:'棒球棍', eff:'crit'}]},
-        {t:2, n:'瘋狂校工', hp:300, atk:40, sks:[{n:'拖把橫掃', eff:'acc_down'}, {n:'強酸清潔劑', eff:'poison'}]},
-        {t:3, n:'化學老師', hp:650, atk:70, sks:[{n:'爆炸試劑', eff:'burn'}, {n:'毒氣雲', eff:'poison_aoe'}]},
-        {t:4, n:'四分衛隊長', hp:1200, atk:100, sks:[{n:'野蠻衝撞', eff:'stun'}, {n:'團隊精神', eff:'def_up'}]},
-        {t:5, n:'魔鬼校長', hp:2100, atk:170, sks:[{n:'開除學籍', eff:'kill'}, {n:'廣播洗腦', eff:'san_dmg'}]}
-    ]
-};
-
-const SKILLS = {
-    chuunibyou: {n:'中二病', cd:4, desc:'攻擊力提升1-100%持續3回合'},
-    snipe: {n:'精準狙擊', cd:3, desc:'200%傷害, 可暴擊'},
-    first_aid: {n:'急救', cd:4, desc:'恢復50%已損生命'},
-    fate_throw: {n:'命運一擲', cd:3, desc:'50%-400%傷害, 可暴擊'},
-    weakness_scan: {n:'弱點分析', cd:4, desc:'敵人防禦降30%'},
-    risk_manage: {n:'風險管理', cd:3, desc:'獲得100%最大血量護盾'},
-    kungfu_panda: {n:'功夫熊貓', cd:3, desc:'秒殺/回血/暈眩傷害'},
-    flash_bang: {n:'閃光彈', cd:4, desc:'敵人降攻與命中'},
-    rage: {n:'狂暴', cd:5, desc:'消耗HP大幅提升攻擊'},
-    god_hand: {n:'神之一手', cd:4, desc:'防禦100%且必暴擊反擊'},
-    tree_strike: {n:'含家鏟泥來種樹', cd:4, desc:'150%傷害+定身2回合'},
-    risk_hedge: {n:'風險對沖', cd:3, desc:'免疫傷害轉為未來兩次攻擊加成'},
-    dictionary: {n:'查字典', cd:3, desc:'隨機: 攻/防/善/惡'},
-    dlss: {n:'DLSS加速', cd:4, desc:'提升50%敏捷閃避'},
-    bullseye: {n:'紅心鎖定', cd:3, desc:'無視防禦必中, 可暴擊'},
-    creatine: {n:'Creatine', cd:4, desc:'全屬性攻防+50%'},
-    hypnosis: {n:'催眠', cd:5, desc:'敵人睡眠2回合'},
-    shave: {n:'剃光頭', cd:3, desc:'敵降攻防命中各20%'},
-    tesla_coil: {n:'特斯拉線圈', cd:4, desc:'200%傷+降防, 機率持續'},
-    pi_strike: {n:'圓周率', cd:3, desc:'1-200 x PI 傷害'},
-    kid_squad: {n:'媽的貢丸忍刀五人眾', cd:5, desc:'召喚朋友助陣5回合'},
-    money_rain: {n:'大撒幣', cd:4, desc:'幸運與智力加成傷害'},
-    waterfall: {n:'Kim Setup', cd:4, desc:'110%-500%傷害'},
-    drift: {n:'東京漂移', cd:3, desc:'連擊機率提升'},
-    matrix: {n:'Matrix World', cd:4, desc:'閃避提升50%'},
-    one_cue: {n:'一Q清檯', cd:4, desc:'機率秒殺或200%傷'},
-    holy_chant: {n:'聖靈吟唱', cd:4, desc:'扣敵血量百分比並反傷'},
-    talisman: {n:'天師符', cd:3, desc:'定身並召喚殭屍, 2回合轉化'},
-    welding: {n:'全身焊接', cd:3, desc:'敵命中降50%降防'},
-    raptor: {n:'速龍突襲', cd:3, desc:'200%傷, 機率直接逮捕'},
-    redbull: {n:'Red Bull BC ONE', cd:4, desc:'攻閃+30%'},
-    high_pitch: {n:'飆高音', cd:3, desc:'受傷但降敵攻命'}
-};
-
-const MAIN_PLOT = {
-    1: "【末蝕降臨】<br>天空被血紅色的日蝕吞沒，刺耳的防空警報聲在尖叫了三小時後終於沉寂，取而代之的是街道上無休止的嘶吼與咀嚼聲。你從昏迷中醒來，空氣中瀰漫著鐵鏽與腐肉混合的腥味。手機螢幕亮著最後一條緊急通告：「不要相信任何人，不要發出聲音。」你看著窗外燃燒的城市，握緊了手中唯一的武器。舊世界已經死了，從今天起，活下去是唯一的法律。",
-    
-    10: "【適應與絕望】<br>十天過去了，救援隊沒有來，廣播頻段也只剩下一片死寂的白噪音。你學會了在睡覺時睜著一隻眼，學會了分辨風聲與喪屍拖行腳步聲的區別。街道上的屍體開始腫脹、腐爛，但更可怕的是那些活著的人。昨天你看見有人為了一罐過期的貓罐頭，用磚頭砸爛了同伴的腦袋。你意識到，比起那些嗜血的怪物，飢餓和恐懼才是更致命的毒藥。",
-    
-    20: "【進化的徵兆】<br>情況正在惡化。你在外出搜尋物資時，遇到了一隻與眾不同的喪屍。它的肌肉呈現出異常的灰白色，行動速度遠超常人，甚至懂得躲避你的攻擊。日蝕帶來的輻射似乎正在催化某種變異。在它的屍體旁，你發現了一本染血的筆記，上面潦草地寫著：「它們在學習……它們在進化……蝕刻病毒不是自然產物。」這行字讓你背脊發涼。",
-    
-    30: "【暗夜低語】<br>最近的夜晚變得格外漫長。紅色的月光下，你總能聽到城市深處傳來低沉的轟鳴聲，像是某種巨大的心臟在跳動。你的精神狀態開始變得不穩定，幻聽越來越頻繁。有時候，你會覺得那些喪屍在呼喚你的名字。你必須時刻盯著自己的SAN值，在這個瘋狂的世界裡，保持理智比保持健康更難。你告訴自己：那只是風聲，那只是風聲。",
-    
-    40: "【倖存者據點】<br>你收到了一個斷斷續續的無線電信號，坐標指向市中心的廣播塔。當你冒死趕到時，只看到了一片廢墟和滿地的彈殼。據點被攻破了，牆上用血寫著巨大的「叛徒」。這裡曾發生過一場激烈的內鬥。你在屍堆中找到了一張地圖，上面圈出了幾個紅色的危險區域，並標註著「巢穴」。看來，有組織的屍群正在形成，而人類依然在自相殘殺。",
-    
-    50: "【血色滿月】<br>今天是「血月」之夜。天空中的日蝕光環變得鮮紅欲滴，所有的喪屍都陷入了狂暴狀態。它們不再漫無目的地遊蕩，而是像潮水一樣向著同一個方向湧去——城市的中央區。你在高處用望遠鏡觀察，看到了一個令人絕望的景象：無數的喪屍正在堆疊在一起，似乎在建造某種祭壇。這不再是單純的病毒爆發，這是某種邪惡儀式的開端。",
-    
-    60: "【變異核心】<br>為了尋找更強力的裝備，你深入了地圖上標記的「重度污染區」。這裡的植物都變成了紫黑色，會主動纏繞過往的生物。你在一間地下實驗室裡發現了驚人的真相：這次末日並非天災，而是「永生計劃」的失敗品。最初的病毒是為了修復人體細胞，卻在日蝕的引力波下發生了不可逆的突變。你是唯一的知情者，這份真相沉重得讓你喘不過氣。",
-    
-    70: "【獵殺者出現】<br>你感覺自己被盯上了。一種穿著破爛風衣、手持電鋸的巨型喪屍開始頻繁出現在你的活動區域。它似乎擁有一定的智力，專門獵殺其他倖存者並收集他們的裝備。這是「暴君」級別的變異體。在一次遭遇戰中，你勉強逃脫，但你的手臂上留下了深可見骨的傷痕。你知道，這場貓鼠遊戲不會持續太久，你要麼殺了它，要麼成為它的戰利品。",
-    
-    80: "【孤獨的信號】<br>無線電再次響起，這次是一個清晰的男聲，自稱是「方舟」基地的科學家。他說他們研發出了能暫時抑制病毒的血清，但需要有人將關鍵的數據芯片送到城市邊緣的發射井。這聽起來像是一個陷阱，或者是最後的希望。你看著日益枯竭的物資和窗外越來越密集的屍群，決定賭一把。反正，留在這裡也只是等死。",
-    
-    90: "【屍潮圍城】<br>前往發射井的路被屍潮徹底堵死了。成千上萬的喪屍擠滿了街道，如同黑色的河流。你被迫躲進一棟堅固的銀行大樓。接下來的三天是地獄般的煎熬，你利用狹窄的樓道和自製的陷阱，擊退了一波又一波的進攻。彈藥耗盡了，你只能用消防斧肉搏。當最後一隻喪屍倒下時，你全身都被黑色的血漿覆蓋，分不清是自己的還是怪物的。",
-    
-    100: "【百日餘生】<br>活過一百天，這本身就是一個奇蹟。你的眼神變得像野獸一樣冷酷，你的肌肉記憶裡刻滿了殺戮的技巧。你不再是那個在辦公室裡敲鍵盤的普通人，你是廢土上的獵人。你找到了一面鏡子，幾乎認不出裡面的自己。長髮凌亂，滿臉鬍渣，眼神中透著一股令人膽寒的殺氣。你活下來了，但你的人性還剩下多少？",
-    
-    120: "【基因鎖解除】<br>在長期的戰鬥和輕微的病毒感染下，你的身體似乎也發生了某種變化。你的力量、反應速度都遠超常人，傷口的癒合速度也變快了。科學家稱之為「適應性進化」。你開始能使用一些常人無法想像的重型武器，甚至能感知到周圍喪屍的腦電波波動。這是一份禮物，還是一份詛咒？你正在慢慢變成你所對抗的怪物嗎？",
-    
-    140: "【通往地獄的車票】<br>你終於接近了城市的核心區——那個巨大的黑色尖塔所在的位置。那裡曾是这座城市最高的摩天大樓，現在卻被無數的血肉藤蔓包裹，成為了連接天與地的魔塔。周圍的引力場異常混亂，車輛懸浮在半空，建築物扭曲變形。每前進一步，你的大腦都像被針扎一樣劇痛。最終的審判之地就在眼前。",
-    
-    160: "【最後的通牒】<br>「方舟」的科學家再次聯繫了你，聲音急促而絕望。他們說，日蝕即將進入「全食」階段，屆時尖塔將釋放覆蓋全球的衝擊波，徹底重寫地球生態。人類將徹底滅絕，取而代之的是新的硅基-血肉混合生命體。你必須在第 196 天之前攻入塔頂，摧毀那個被稱為「屍王」的核心載體。你是全人類最後的希望。",
-    
-    180: "【決戰前夕】<br>你將所有的資源都拿了出來，最好的槍械，最鋒利的刀刃，還有那一支珍貴的腎上腺素。你坐在營火旁，仔細地擦拭著武器。回想起這 180 天的旅程，那些死去的朋友，那些失去的人性，所有的痛苦和犧牲都將在接下來的戰鬥中得到終結。你沒有恐懼，只有燃燒的怒火。明天，太陽將會升起，或者是永遠的黑暗。",
-    
-    196: "【終焉之刻】<br>你站在了黑色尖塔的頂端。狂風呼嘯，血紅色的天空彷彿觸手可及。在你面前的，是那個引發了一切災難的源頭——最終屍王。它懸浮在半空，身後連接著無數的血管與電纜，宛如一尊墮落的神明。它緩緩睜開了眼睛，那雙眼睛裡沒有瞳孔，只有無盡的虛空。「你來遲了，凡人。」它發出震耳欲聾的咆哮。拔出你的武器吧，為了人類的黎明，斬殺神明！"
-};
 
 // ==================== 1. 遊戲核心變數 ====================
 // 1. 替換 let G = { ... }
@@ -425,6 +213,8 @@ function showJobIntro() {
 
 function startJourney() {
     closeModal();
+    showGameContainer();
+
     G.day = 1; 
     log('系統', '旅程開始。', 'c-story');
     updateUI();
@@ -482,6 +272,7 @@ function normalCampLogic() {
     if(G.job.passive === 'dev_buff') baseCost = Math.floor(baseCost * 0.6);  // Kim 地產霸權
 
     G.food -= baseCost; G.water -= baseCost;
+    log('生存', `消耗食物 -${baseCost}, 水源 -${baseCost}`, 'c-loss');
 
     // === 天氣收益 (削弱) ===
     if(weather.c === 1) { 
@@ -814,6 +605,8 @@ function startEpicStory() {
         lastResult: '', 
         data: storyData
     };
+
+    hideGameContainer();
     renderStoryModal();
 }
 
@@ -859,6 +652,7 @@ function getEventReward() {
 function storyChoose(type, statKey, isBoss, bossName, isQuest) {
     if (isBoss) {
         closeModal();
+        showGameContainer();
         let targetName = bossName || '區域領主';
         triggerBossFight(targetName, isQuest);
         return;
@@ -1663,7 +1457,7 @@ function renderCombat() {
         <div class="combat-grid">
             <button onclick="combatRound('melee')" ${disableAll}>⚔️ 近戰<br><small style="color:#888">預估: ${getDmgEst('melee')}</small></button>
             <button onclick="combatRound('ranged')" ${disableAll} ${G.ammo>0?'':'disabled'}>🔫 射擊 (${G.ammo})<br><small style="color:#888">預估: ${getDmgEst('ranged')}</small></button>
-            <button onclick="combatRound('skill')" ${disableAll} ${(G.activeSkillCD>0 || isSilenced)?'disabled':''}>${skillBtnText}</button>
+            <button title="${skillData.desc}" onclick="combatRound('skill')" ${disableAll} ${(G.activeSkillCD>0 || isSilenced)?'disabled':''}>${skillBtnText}</button>
             <button onclick="combatRound('defend')" ${disableAll} ${G.playerDefCD>0?'disabled':''} style="border-color:#55aaff">🛡️ 防禦 (CD:${G.playerDefCD})</button>
             <button class="combat-full-width" onclick="openCombatBag()" ${(c.usedItem || pStun)?'disabled style="opacity:0.5"':''}>🎒 戰鬥物品 (${G.bag.length})</button>
             <button class="combat-full-width" onclick="combatRound('flee')" ${disableAll}>🏃 逃跑</button>
@@ -2401,9 +2195,10 @@ function useCombatItem(idx) {
 function showPlotDialog(day, callback) {
     let text = MAIN_PLOT[day] || "......";
     G.dialogCallback = callback;
+    hideGameContainer();
     openModal(`📜 主線劇情 (Day ${day})`, `<div class="story-text main-story-text">${text}</div>`, `<button onclick="closePlotDialog()">繼續</button>`);
 }
-function closePlotDialog() { closeModal(); if(G.dialogCallback) G.dialogCallback(); }
+function closePlotDialog() { closeModal(); showGameContainer(); if(G.dialogCallback) G.dialogCallback(); }
 
 function openModal(title, content, btns) {
     document.getElementById('m-title').innerHTML = title;
@@ -2705,7 +2500,7 @@ function equipLoot() {
 function discardLoot() { if(G.tempLoot.item.ammo)G.ammo+=G.tempLoot.item.ammo; closeModal(); if(G.tempLoot.cb)G.tempLoot.cb(); }
 function gameOver(reason) { 
     G.alive = false;
-    
+    hideGameContainer();
     let btnHtml = `<button onclick="location.reload()" style="border-color:#f44; color:#f44; width:100%">💀 重新開始 (F5)</button>`;
 
     if (G.day >= 30) {
@@ -3237,6 +3032,14 @@ function recycleLoot() {
     if(G.tempLoot.cb) G.tempLoot.cb();
 }
 
+function hideGameContainer(){
+    document.getElementById('game-container').style.display = 'none';
+}
+
+function showGameContainer(){
+    document.getElementById('game-container').style.display = 'flex';
+}
+
 function collapseStat(){
     const statBar = document.getElementById('stat-bar');
     const statBtn = document.getElementById('stat-btn');
@@ -3293,6 +3096,9 @@ const globalFunctions = {
     useCampItem,
     collapseStat,
     collapseEquip,
+    renderCampActions,
+    campPhase,
+    nextStoryStep,
 };
 
 Object.assign(window, globalFunctions);
