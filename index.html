@@ -1,0 +1,113 @@
+<!DOCTYPE html>
+<html lang="zh-HK">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>末蝕紀元 v0.5 試玩版</title>
+    <link rel="stylesheet" href="style.css" />
+</head>
+<body>
+    <div id="game-container" style="display:none">
+        <div id="weather-bar">
+            <span id="w-text">☀️ 晴朗</span></span>
+            <button id="quest-btn" type="button" onclick="showQuestDetail()">📜 任務資訊</button>
+            <span><span id="v-job" style="color:var(--r-rare)"></span> / <span id="v-mbti" class="c-mbti"></span> <span id="v-status-extra" style="color:#f44"></span></span>
+        </div>
+
+        <div id="header">
+            <button id="stat-btn" type="button" onclick="collapseStat()">🔽 現在資訊</button>
+            <div id="stat-bar">
+                <div class="stat-box"><span class="stat-lbl">Day</span><span class="stat-val" id="v-day">0</span></div>
+                <div class="stat-box"><span class="stat-lbl">HP</span><span class="stat-val" style="color:var(--hp-color)"><span id="v-hp">100</span>/<span id="v-max-hp">100</span></span></div>
+                <div class="stat-box"><span class="stat-lbl">SAN</span><span class="stat-val" style="color:var(--san-color)" id="v-san">100</span></div>
+                <div class="stat-box" onclick="showStats()"><span class="stat-lbl">Lv. <span id="v-lvl" style="color:#fff">1</span></span><span class="stat-val" id="v-stats">屬性</span></div>
+                <div class="stat-box"><span class="stat-lbl">XP</span><span class="stat-val" id="v-xp" style="color:var(--xp-color)">0/20</span></div>
+                <div class="stat-box"><span class="stat-lbl">物資</span><span class="stat-val"><span id="v-food-icon">🍖</span><span id="v-food">100</span>/<span id="v-water-icon">💧</span><span id="v-water">100</span></span></div>
+                <div class="stat-box"><span class="stat-lbl">💰 金錢</span><span class="stat-val" id="v-money" style="color:#ffd700">0</span></div>
+            </div>
+        </div>
+        
+        <div id="equip-bar">
+            <button id="equip-btn" type="button" onclick="collapseEquip()">🔽 裝備</button>
+            <div id="equip-container">
+                <div class="eq-row" onclick="showItemDetail('melee')">
+                    <span class="eq-label">⚔️ 近戰</span><span id="eq-melee" class="eq-val q0">(未裝備)</span>
+                    <div id="tag-melee" class="mastery-tag" style="display:none">專精</div>
+                </div>
+                <div class="eq-row" onclick="showItemDetail('ranged')">
+                    <span class="eq-label">🔫 遠程</span><span class="eq-val"><span id="eq-ranged" class="q0">(未裝備)</span> <span id="v-ammo" style="color:#666;font-size:0.8em;font-weight:normal">(0)</span></span>
+                    <div id="tag-ranged" class="mastery-tag" style="display:none">專精</div>
+                </div>
+                <div class="eq-row" onclick="showItemDetail('head')"><span class="eq-label">🪖 頭部</span><span id="eq-head" class="eq-val q0">(未裝備)</span></div>
+                <div class="eq-row" onclick="showItemDetail('body')"><span class="eq-label">👕 身體</span><span id="eq-body" class="eq-val q0">(未裝備)</span></div>
+                <div class="eq-row" onclick="showItemDetail('acc')"><span class="eq-label">💍 飾品</span><span id="eq-acc" class="eq-val q0">(未裝備)</span></div>
+            </div>
+        </div>
+
+    <!-- ★★★敵人專屬區域 ★★★ -->
+        <div id="enemy-area" style="display:none"></div>
+
+        <div id="log-area"></div>
+        <div id="action-area"></div>
+    </div>
+
+    <!-- Modal -->
+    <div id="screen-modal" class="overlay" style="display:none" >
+        <div id="modal-content" onclick="event.stopPropagation()">
+            <h2 id="m-title" style="margin:0 0 10px 0; color:#fff"></h2>
+            <div id="m-desc" style="color:#ccc; line-height:1.6; font-size:0.95em"></div>
+            <div id="m-btns" style="margin-top:15px"></div>
+        </div>
+    </div>
+
+    <!-- Start Screens -->
+    <div id="screen-start" class="overlay">
+        <h1 style="color:var(--r-legend); font-size: 2.5em; text-transform: uppercase; margin-bottom:10px; text-shadow: 0 0 20px rgba(255,170,0,0.5);">末蝕紀元 v0.6</h1>
+        <p style="color:#888; margin-bottom: 20px;">正式內容將會大幅更新</p>
+        <div style="display:flex; gap:10px;">
+            <button type="button" onclick="startGame(1)" style="width:120px;text-align:center">🟢 正常</button>
+            <button type="button" onclick="startGame(2)" style="width:120px;text-align:center;border-color:var(--r-rare)">🟡 困難</button>
+            <button type="button" onclick="startGame(3)" style="width:120px;text-align:center;border-color:var(--r-legend)">🔴 噩夢</button>
+        </div>
+    </div>
+
+    <div id="screen-jobs" class="overlay" style="display:none; flex-direction:column; justify-content:flex-start; padding-top:5vh;">
+    
+    <!-- 標題區 -->
+    <div style="text-align:center; margin-bottom:15px;">
+        <h2 style="color:#ccc; margin:0 0 10px 0;">Step 1: 選擇前世身份</h2>
+        <p style="color:#888; font-size:0.9em; margin:0;">請選擇一個戰鬥風格以查看詳細職業</p>
+    </div>
+
+    <!-- 1. 固定不消失的分類按鈕列 -->
+    <div id="tab-container" style="display:flex; gap:10px; margin-bottom:20px; flex-wrap:wrap; justify-content:center;">
+        <!-- 注意：onclick 傳入的參數對應 RPG_CLASSES 的 key -->
+        <button id="tab-warrior" onclick="renderJobs('warrior')" style="border-color:#d96; min-width:80px;">🛡️ 鐵衛</button>
+        <button id="tab-berserker" onclick="renderJobs('berserker')" style="border-color:#f44; min-width:80px;">⚔️ 狂戰</button>
+        <button id="tab-ranger" onclick="renderJobs('ranger')" style="border-color:#4f4; min-width:80px;">🏹 遊俠</button>
+        <button id="tab-mage" onclick="renderJobs('mage')" style="border-color:#4cf; min-width:80px;">🔮 秘法</button>
+        <button id="tab-special" onclick="renderJobs('special')" style="border-color:#ffd700; min-width:80px;">🦄 特殊</button>
+    </div>
+
+    <!-- 2. 角色卡片顯示區 (這裡只會顯示當前選中分類的角色) -->
+    <div id="job-container" class="btn-grid" style="
+        width: 95%; 
+        max-width: 1000px; 
+        max-height: 65vh; 
+        overflow-y: auto; 
+        display: grid; 
+        grid-template-columns: repeat(auto-fill, minmax(240px, 1fr)); 
+        gap: 15px; 
+        padding: 5px;
+        align-content: start;">
+        <!-- JS 會將內容渲染在這裡 -->
+    </div>
+</div>
+
+    <div id="screen-mbti" class="overlay" style="display:none">
+        <h2 style="color:#ccc; margin-bottom:20px">Step 2: 選擇人格特質</h2>
+        <div id="mbti-container" style="display:flex; gap:20px; flex-wrap:wrap; justify-content:center;"></div>
+    </div>
+    <script script type="module" src="./game.js"></script>
+</body>
+</html>
