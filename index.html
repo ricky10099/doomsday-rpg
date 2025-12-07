@@ -62,7 +62,7 @@
 
     <!-- Start Screens -->
     <div id="screen-start" class="overlay">
-        <h1 style="color:var(--r-legend); font-size: 2.5em; text-transform: uppercase; margin-bottom:10px; text-shadow: 0 0 20px rgba(255,170,0,0.5);">末蝕紀元 v50.3</h1>
+        <h1 style="color:var(--r-legend); font-size: 2.5em; text-transform: uppercase; margin-bottom:10px; text-shadow: 0 0 20px rgba(255,170,0,0.5);">末蝕紀元 v0.6</h1>
         <p style="color:#888; margin-bottom: 20px;">正式內容將會大幅更新</p>
         <div style="display:flex; gap:10px;">
             <button type="button" onclick="startGame(1)" style="width:120px;text-align:center">🟢 正常</button>
@@ -71,10 +71,38 @@
         </div>
     </div>
 
-    <div id="screen-jobs" class="overlay" style="display:none">
-        <h2 style="color:#ccc; margin-bottom:20px">Step 1: 選擇前世身份 (9/32)</h2>
-        <div id="job-container" class="btn-grid" style="width:90%; max-height:80vh; overflow-y:auto; display:grid; grid-template-columns: repeat(auto-fit, minmax(220px, 1fr));"></div>
+    <div id="screen-jobs" class="overlay" style="display:none; flex-direction:column; justify-content:flex-start; padding-top:5vh;">
+    
+    <!-- 標題區 -->
+    <div style="text-align:center; margin-bottom:15px;">
+        <h2 style="color:#ccc; margin:0 0 10px 0;">Step 1: 選擇前世身份</h2>
+        <p style="color:#888; font-size:0.9em; margin:0;">請選擇一個戰鬥風格以查看詳細職業</p>
     </div>
+
+    <!-- 1. 固定不消失的分類按鈕列 -->
+    <div id="tab-container" style="display:flex; gap:10px; margin-bottom:20px; flex-wrap:wrap; justify-content:center;">
+        <!-- 注意：onclick 傳入的參數對應 RPG_CLASSES 的 key -->
+        <button id="tab-warrior" onclick="renderJobs('warrior')" style="border-color:#d96; min-width:80px;">🛡️ 鐵衛</button>
+        <button id="tab-berserker" onclick="renderJobs('berserker')" style="border-color:#f44; min-width:80px;">⚔️ 狂戰</button>
+        <button id="tab-ranger" onclick="renderJobs('ranger')" style="border-color:#4f4; min-width:80px;">🏹 遊俠</button>
+        <button id="tab-mage" onclick="renderJobs('mage')" style="border-color:#4cf; min-width:80px;">🔮 秘法</button>
+        <button id="tab-special" onclick="renderJobs('special')" style="border-color:#ffd700; min-width:80px;">🦄 特殊</button>
+    </div>
+
+    <!-- 2. 角色卡片顯示區 (這裡只會顯示當前選中分類的角色) -->
+    <div id="job-container" class="btn-grid" style="
+        width: 95%; 
+        max-width: 1000px; 
+        max-height: 65vh; 
+        overflow-y: auto; 
+        display: grid; 
+        grid-template-columns: repeat(auto-fill, minmax(240px, 1fr)); 
+        gap: 15px; 
+        padding: 5px;
+        align-content: start;">
+        <!-- JS 會將內容渲染在這裡 -->
+    </div>
+</div>
 
     <div id="screen-mbti" class="overlay" style="display:none">
         <h2 style="color:#ccc; margin-bottom:20px">Step 2: 選擇人格特質</h2>

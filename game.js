@@ -1,8 +1,10 @@
 // ==================== Data import ====================
 // ==================== 0. 基礎資料庫 ====================
+
 import MBTI_TYPES from './data/MBTI_TYPES.json' with  { type: "json" };
 // 共通裝備庫：5類 x 5 Tier x 10種 = 250種
 // 格式：[ [Tier1 items...], [Tier2 items...], ... ]
+
 // 共通裝備庫：5類裝備 + 2類消耗品
 import COMMON_DB from './data/COMMON_DB.json' with  { type: "json" };
 // ==================== 職業專屬裝備庫 (Tier 1 基礎值) ====================
@@ -12,13 +14,16 @@ import JOB_EXCLUSIVE_DB from './data/JOB_EXCLUSIVE_DB.json' with  { type: "json"
 import ALL_JOBS from './data/ALL_JOBS.json' with  { type: "json" };
 import QUEST_DB from './data/QUEST_DB.json' with  { type: "json" };
 import LOCATIONS from './data/LOCATIONS.json' with  { type: "json" };
-import LOC_EVENT_DB from './data/LOCATIONS.json' with  { type: "json" };
+import LOC_EVENT_DB from './data/LOC_EVENT_DB.json' with { type: "json" };
+
 // ==================== 怪物資料庫擴充 ====================
 // 1. 普通怪物庫 (50種, 10 per Tier)
 // 結構: { n:名字, hp:基數, atk:基數, desc:描述, tier:等級 }
 import NORMAL_ENEMIES from './data/NORMAL_ENEMIES.json' with  { type: "json" };
+
 // 2. 精英怪物庫 (20種, 4 per Tier) - 具備獨特技能
 import ELITE_ENEMIES from './data/ELITE_ENEMIES.json' with  { type: "json" };
+
 // 3. 地點專屬 Boss (12地點 x 5 Tier = 60 Bosses)
 // 每個 Boss 至少 2 個技能
 import LOCATION_BOSSES from './data/LOCATION_BOSSES.json' with  { type: "json" };
@@ -84,6 +89,35 @@ function triggerLocationEvent(locName) {
     renderStoryModal();
 }
 
+	// === 新增：職業分類數據 ===
+const RPG_CLASSES = {
+    'warrior': { 
+        label: '🛡️ 鐵衛 (坦克/生存)', 
+        color: '#d96',
+        jobs: ['健身教練', '男護士', 'iBanker', '圍棋棋士', '特教老師'] 
+    },
+    'berserker': { 
+        label: '⚔️ 狂戰 (爆發/力量)', 
+        color: '#f44',
+        jobs: ['圍村村霸', '地盤判頭', '三星廚師', '地產商', 'Cosplayer'] 
+    },
+    'ranger': { 
+        label: '🏹 遊俠 (敏捷/暴擊)', 
+        color: '#4f4',
+        jobs: ['電競選手', '飛鏢運動員', 'F1賽車手', '造型師', '警察', '外送員', 'Popper'] 
+    },
+    'mage': { 
+        label: '🔮 秘法 (智力/控制)', 
+        color: '#4cf',
+        jobs: ['Tesla工程師', 'Nvidia工程師', '道士', '心理醫生', '攝影師', '神學家', '數學家', '黑客'] 
+    },
+    'special': { 
+        label: '🦄 特殊 (機制/運氣)', 
+        color: '#ffd700',
+        jobs: ['機械師', '小學生', '莊家', '賭場荷官', '精算師', '園藝師', '追星族'] 
+    }
+};
+
 // ==================== 1. 遊戲核心變數 ====================
 // 1. 替換 let G = { ... }
 let G = { 
@@ -118,20 +152,144 @@ function startGame(diff) {
     
     document.getElementById('screen-start').style.display = 'none';
     
-    let c = document.getElementById('job-container');
-    c.innerHTML = '';
-    let pool = [...ALL_JOBS].sort(()=>0.5-Math.random()).slice(0, 9);
-    
-    pool.forEach(j => {
-        let div = document.createElement('div');
-        div.className = 'comp-box'; div.style.cursor='pointer';
-        div.innerHTML = `<strong class="q3">${j.n}</strong><br><span style="font-size:0.8em;color:#aaa">力${j.s.s} 敏${j.s.a} 智${j.s.i} 意${j.s.w}</span><div style="font-size:0.8em;margin-top:5px;color:#888">${j.desc}</div>`;
-        div.onclick = () => { G.job = j; G.stats = {...j.s}; showMbti(); };
-        c.appendChild(div);
-    });
+    renderJobIntro(); 
     document.getElementById('screen-jobs').style.display = 'flex';
 }
 
+
+// === 新增：初始引導畫面 ===
+function renderJobIntro() {
+    // 1. 清除所有按鈕的高亮狀態 (重置為預設)
+    const allTabs = ['warrior', 'berserker', 'ranger', 'mage', 'special'];
+    allTabs.forEach(tab => {
+        let btn = document.getElementById('tab-' + tab);
+        if (btn) {
+            btn.style.backgroundColor = '#252525';
+            btn.style.color = RPG_CLASSES[tab].color;
+            btn.style.fontWeight = 'normal';
+            btn.style.boxShadow = 'none';
+            btn.style.opacity = '0.7'; // 稍微變暗，暗示未選中
+        }
+    });
+
+    // 2. 獲取容器並清空
+    let container = document.getElementById('job-container');
+    container.innerHTML = '';
+    
+    // 3. 插入引導文字 (使用 Flex 居中顯示)
+    // 這裡我們把容器暫時改為 flex 布局以便居中，點擊按鈕後 renderJobs 會改回 grid
+    container.style.display = 'flex';
+    container.style.flexDirection = 'column';
+    container.style.alignItems = 'center';
+    container.style.justifyContent = 'center';
+    
+    let html = `
+        <div style="text-align:center; padding:20px; color:#aaa;">
+            <h3 style="margin-bottom:20px; color:#fff;">請點擊上方按鈕選擇系別</h3>
+            <div style="display:grid; grid-template-columns: repeat(auto-fit, minmax(200px, 1fr)); gap:15px; text-align:left; width:100%; max-width:600px;">
+                <div style="border-left:3px solid #aaa; padding-left:10px;">
+                    <strong style="color:#d96">🛡️ 鐵衛</strong><br>
+                    <span style="font-size:0.8em">高生存、防禦、格擋、回血。</span>
+                </div>
+                <div style="border-left:3px solid #f44; padding-left:10px;">
+                    <strong style="color:#f44">⚔️ 狂戰</strong><br>
+                    <span style="font-size:0.8em">高爆發、以血換血、燃燒。</span>
+                </div>
+                <div style="border-left:3px solid #4f4; padding-left:10px;">
+                    <strong style="color:#4f4">🏹 遊俠</strong><br>
+                    <span style="font-size:0.8em">高敏捷、閃避、暴擊、連擊。</span>
+                </div>
+                <div style="border-left:3px solid #4cf; padding-left:10px;">
+                    <strong style="color:#4cf">🔮 秘法</strong><br>
+                    <span style="font-size:0.8em">高智力、控制(暈/睡)、異常狀態。</span>
+                </div>
+                <div style="border-left:3px solid #ffd700; padding-left:10px;">
+                    <strong style="color:#ffd700">🦄 特殊</strong><br>
+                    <span style="font-size:0.8em">召喚、金錢攻擊、運氣機制。</span>
+                </div>
+            </div>
+            <p style="margin-top:30px; font-size:0.9em; color:#666;">點擊上方按鈕即可查看詳細角色數值</p>
+        </div>
+    `;
+    
+    container.innerHTML = html;
+}
+
+function renderJobs(category) {
+    // 1. 處理按鈕高亮樣式 (UI回饋)
+   const allTabs = ['warrior', 'berserker', 'ranger', 'mage', 'special'];
+    allTabs.forEach(tab => {
+        let btn = document.getElementById('tab-' + tab);
+        if (btn) {
+            if (tab === category) {
+                // 選中
+                btn.style.backgroundColor = RPG_CLASSES[tab].color;
+                btn.style.color = '#000'; 
+                btn.style.fontWeight = 'bold';
+                btn.style.boxShadow = `0 0 10px ${RPG_CLASSES[tab].color}`;
+                btn.style.opacity = '1';
+            } else {
+                // 未選中
+                btn.style.backgroundColor = '#252525';
+                btn.style.color = RPG_CLASSES[tab].color;
+                btn.style.fontWeight = 'normal';
+                btn.style.boxShadow = 'none';
+                btn.style.opacity = '0.6'; // 未選中變暗
+            }
+        }
+    });
+
+    // 2. 獲取容器並清空
+    let container = document.getElementById('job-container');
+    container.innerHTML = '';
+    
+	// ★★★ 新增：將容器樣式還原為 Grid (因為 Intro 頁面把它改成了 Flex) ★★★
+    container.style.display = 'grid';
+    container.style.flexDirection = 'unset';
+    container.style.alignItems = 'unset';
+    container.style.justifyContent = 'unset';
+    // ===============================================================
+
+    // 3. 獲取該分類的數據
+    const group = RPG_CLASSES[category];
+    
+    // 4. 過濾職業
+    let pool = ALL_JOBS.filter(j => 
+        group.jobs.some(targetName => j.n.includes(targetName)) && !j.n.includes('Lil Kid')
+    );
+
+    // 5. 生成卡片 (Grid Item)
+    pool.forEach(j => {
+        let div = document.createElement('div');
+        div.className = 'comp-box'; 
+        div.style.cursor = 'pointer';
+        div.style.textAlign = 'left';
+        div.style.border = `1px solid ${group.color}`; // 邊框跟隨分類顏色
+        div.style.display = 'flex';
+        div.style.flexDirection = 'column';
+        div.style.justifyContent = 'space-between';
+        
+        // 懸停效果
+        div.onmouseover = () => { div.style.backgroundColor = '#222'; };
+        div.onmouseout = () => { div.style.backgroundColor = '#080808'; };
+        
+        let statText = `<span style="color:#f66">力${j.s.s}</span> <span style="color:#4f4">敏${j.s.a}</span> <span style="color:#4cf">智${j.s.i}</span> <span style="color:#f4f">意${j.s.w}</span>`;
+        
+        div.innerHTML = `
+            <div>
+                <div class="q3" style="font-size:1.1em; margin-bottom:8px; color:${group.color}; text-shadow:none;">${j.n}</div>
+                <div style="font-size:0.9em; margin-bottom:8px; background:#1a1a1a; padding:4px; border-radius:3px; text-align:center;">${statText}</div>
+                <div style="font-size:0.85em; color:#ccc; line-height:1.5;">${j.desc}</div>
+            </div>
+            <div style="margin-top:10px; font-size:0.8em; color:#666; text-align:right;">
+                特質: ${j.trait}
+            </div>
+        `;
+        
+        div.onclick = () => { G.job = j; G.stats = {...j.s}; showMbti(); };
+        container.appendChild(div);
+    });
+}
 function showMbti() {
     document.getElementById('screen-jobs').style.display = 'none';
     let c = document.getElementById('mbti-container');
@@ -259,15 +417,10 @@ function normalCampLogic() {
     let weather = [{n:'☀️ 晴朗',c:0},{n:'🌧️ 暴雨',c:1},{n:'🌫️ 濃霧',c:2}][Math.floor(Math.random()*3)];
     document.getElementById('w-text').innerText = weather.n;
     
-      // === 消耗平衡 (大幅上調) ===
-    // 舊版: 10 / 15 / 20 (太少)
-    // 新版:
-    // 正常: 20 (標準消耗，搜刮一次夠吃2天)
-    // 困難: 30 (壓力增大)
-    // 噩夢: 40 (極度飢渴，搜刮一次僅夠1天，稍微臉黑就會斷糧)
+    
     let baseCost = 20;
-    if(G.diff === 2) baseCost = 30;
-    if(G.diff === 3) baseCost = 40;
+    if(G.diff === 2) baseCost = 25;
+    if(G.diff === 3) baseCost = 35;
 
     if(G.job.passive === 'dev_buff') baseCost = Math.floor(baseCost * 0.6);  // Kim 地產霸權
 
@@ -286,16 +439,13 @@ function normalCampLogic() {
     
     // === 飢渴懲罰 (致命化) ===
     if(G.food < 0 || G.water < 0) { 
-        // 舊版: 15 / 30
-        // 新版: 20 / 50 (噩夢斷糧=半條命沒了)
-        // 這會迫使玩家在斷糧前即使只有 10 HP 也要硬著頭皮去搜刮
         let starveDmg = (G.diff === 3) ? 50 : 20;
         G.hp -= starveDmg; 
         log('生存', `嚴重飢渴受傷 -${starveDmg}`, 'c-loss'); 
     }
     
     // === 自然回血 ===
-    let heal = 0;
+    let heal = 5;
     if(G.mbti && G.mbti.bonus && G.mbti.bonus.heal) heal += G.mbti.bonus.heal;
     if(G.job.trait==='護理') heal += 5;
     for(let k in G.eq) if(G.eq[k]?.stats?.heal) heal += G.eq[k].stats.heal;
@@ -514,9 +664,16 @@ function equipFromBag(idx) {
 function campAction(act) {
     if(act==='rest') {
         if(G.food<20) { log('提示','食物不足'); return; }
-        G.food-=20; G.hp=Math.min(G.maxHp, G.hp+30); G.san=Math.min(100, G.san+20);
-        log('休息','體力恢復','c-gain');
-    } else if(act==='water') {
+        
+        // === 修改點：大幅提升休息效果 ===
+        G.food -= 20; 
+        // HP恢復改為：固定30 + 最大血量的20% (這樣血量越高回越多)
+        let healAmt = 30 + Math.floor(G.maxHp * 0.2);
+        G.hp = Math.min(G.maxHp, G.hp + healAmt); 
+        G.san = Math.min(100, G.san + 25); // SAN值也多回一點
+        
+        log('休息',`體力恢復 (+${healAmt} HP)`,'c-gain');
+    }  else if(act==='water') {
         let v = 20+Math.floor(Math.random()*30); G.water+=v;
         log('尋水',`獲得水 ${v}`,'c-gain');
     } else if(act==='train') {
@@ -1187,97 +1344,160 @@ function abandonQuest() {
 }
 
 // ==================== 戰鬥與物品 ====================
+// 在 game.js 中找到 triggerBossFight 函數並替換內容
 function triggerBossFight(name, isQuest=false) { 
-    let diffMult = 1 + (G.diff - 1) * 0.5; // 1.0, 1.5, 2.0
-    let hp = Math.floor((500 + G.day * 10) * diffMult); 
-    let atk = Math.floor((35 + G.day * 0.5) * (1 + (G.diff-1)*0.2)); 
-    // 戰鬥開始 CD 歸零
+    // 難度倍率
+    let diffMult = 1 + (G.diff - 1) * 0.3; 
+    let hp, atk, bossDodge;
+
+    if (name === "最終屍王") {
+        hp = 4500; 
+        atk = 180;
+        bossDodge = 50; 
+    } else {
+        if (G.day <= 29) {
+            // [Month 1] 蜜月期
+            hp = 200 + (G.day * 8); 
+            atk = 12 + (G.day * 0.4); 
+            bossDodge = 0; 
+        } else if (G.day <= 59) {
+            // [Month 2] 進階期
+            hp = 350 + (G.day * 9); 
+            atk = 18 + (G.day * 0.5); 
+            bossDodge = 10; 
+        } else if (G.day <= 89) {
+            // [Month 3] 轉折期
+            hp = 700 + (G.day * 12); 
+            atk = 25 + (G.day * 0.7);
+            bossDodge = 25; 
+        } else if (G.day <= 119) {
+            // [Month 4] 噩夢前夕
+            hp = 1500 + (G.day * 15); 
+            atk = 40 + (G.day * 0.8); 
+            bossDodge = 35; 
+        } else {
+            // [Month 5+] 終局
+            hp = 2500 + (G.day * 18); 
+            atk = 60 + (G.day * 0.9);
+            bossDodge = 45; 
+        }
+    }
+
+    hp = Math.floor(hp * diffMult);
+    atk = Math.floor(atk * diffMult);
+
     G.activeSkillCD = 0; 
-    G.combat = { n:name, maxHp:hp, hp:hp, atk:atk, sk:'終極毀滅', isBoss:true, isQuest:isQuest, turnCount:0, buffs:{}, enemySkillCD:0, cloneTurns:0, xpVal:10, isStunned: false, playerShield: 0, usedItem: false };
-    G.playerDefCD = 0; renderCombat();
+    G.playerDefCD = 0;
+
+    G.combat = { 
+        n:name, maxHp:hp, hp:hp, atk:atk, 
+        sk:'終極毀滅', isBoss:true, isQuest:isQuest, 
+        turnCount:0, buffs:{}, enemySkillCD:0, 
+        cloneTurns:0, xpVal: 20 + Math.floor(G.day/4), 
+        isStunned: false, 
+        playerShield: 0, usedItem: false,
+        dodge: bossDodge 
+    };
+    
+    log('遭遇', `強敵出現：${name} (HP:${hp}, ATK:${atk}, 閃避:${bossDodge}%)`, 'c-loss');
+    renderCombat();
 }
 
 function triggerCombat(enemyTemplate, danger) { 
-    // === 修正開始：動態敵人生成邏輯 ===
+    // 1. 獲取當前地點
+    let locationName = window.currentLocName || "民居";
     let tier = getCurrentTier();
+    
     let enemy = null;
     let isElite = false;
     let isBoss = false;
-    let locationName = G.activeQuest ? G.activeQuest.loc : (window.currentLocName || "民居"); // 需要在 explore 中記錄 currentLocName
 
-    // 1. 決定敵人等級
-    // 危險度(Danger) 越高，遇到 Elite/Boss 機率越高
-    let bossChance = 0.02 * danger; 
-    let eliteChance = 0.1 * danger; 
-    
-    // 如果是任務地點，必定Boss (這部分由 triggerBossFight 處理，這裡處理隨機遭遇)
-    
-    // Tier 限制 (避免 Tier 1 出現 Tier 5 怪，但高危區可以越級)
-    let spawnTier = tier;
-    if(danger >= 4 && Math.random() < 0.3) spawnTier = Math.min(5, tier + 1);
-
-    if (Math.random() < bossChance && LOCATION_BOSSES[locationName]) {
-        // 遭遇地點 Boss (稀有)
-        let bosses = LOCATION_BOSSES[locationName];
-        // 找對應 Tier 的 Boss，如果沒有就找最近的
-        enemy = bosses.find(b => b.t === spawnTier) || bosses[0];
-        isBoss = true;
-    } else if (Math.random() < eliteChance) {
-        // 遭遇 Elite
-        let pool = ELITE_ENEMIES[spawnTier] || ELITE_ENEMIES[1];
-        enemy = pool[Math.floor(Math.random() * pool.length)];
-        isElite = true;
+    // 2. 敵人生成邏輯
+    if (enemyTemplate) {
+        enemy = enemyTemplate;
     } else {
-        // 普通怪
-        let pool = NORMAL_ENEMIES[spawnTier] || NORMAL_ENEMIES[1];
-        enemy = pool[Math.floor(Math.random() * pool.length)];
-    }
-	
-	// === 新增點：全敵人動態閃避計算 ===
-    // 基礎閃避：Tier 1 = 0~5%, Tier 5 = 20~25%
-    let baseDodge = (spawnTier - 1) * 5;
+        let safeDanger = danger || 1;
+        let bossChance = 0.02 * safeDanger; 
+        let eliteChance = 0.1 * safeDanger; 
+        let spawnTier = tier;
+        if(safeDanger >= 4 && Math.random() < 0.3) spawnTier = Math.min(5, tier + 1);
 
-    // 2. 數值計算
+        if (Math.random() < bossChance && LOCATION_BOSSES && LOCATION_BOSSES[locationName]) {
+            let bosses = LOCATION_BOSSES[locationName];
+            if (bosses) {
+                enemy = bosses.find(b => b.t === spawnTier) || bosses[0];
+                if (enemy) isBoss = true;
+            }
+        } 
+        
+        if (!enemy && Math.random() < eliteChance) {
+            let pool = ELITE_ENEMIES[spawnTier];
+            if (!pool || pool.length === 0) pool = ELITE_ENEMIES[1];
+            if (pool && pool.length > 0) {
+                enemy = pool[Math.floor(Math.random() * pool.length)];
+                isElite = true;
+            }
+        } 
+        
+        if (!enemy) {
+            let pool = NORMAL_ENEMIES[spawnTier];
+            if (!pool || pool.length === 0) pool = NORMAL_ENEMIES[1];
+            if (!pool || pool.length === 0) enemy = { n: "迷路的喪屍", hp: 30, atk: 5 };
+            else enemy = pool[Math.floor(Math.random() * pool.length)];
+        }
+    }
+
+    // 3. 數值計算
+    let baseDodge = (tier - 1) * 5;
+    if (isBoss) baseDodge += 10; else if (isElite) baseDodge += 5;
+    let finalDodge = Math.max(0, Math.min(60, baseDodge));
+
     let hpMult = (1 + G.day/40) * G.diff;
     let atkMult = (1 + G.day/50) * (1 + (G.diff-1)*0.3);
-
-    // Boss 和 Elite 會有額外加成
-    if (isBoss) { hpMult *= 1.5; atkMult *= 1.2;baseDodge += 10; }
-    else if (isElite) { hpMult *= 1.2; atkMult *= 1.1; baseDodge += 5;}
+    if (isBoss) { hpMult *= 1.5; atkMult *= 1.2; }
+    else if (isElite) { hpMult *= 1.2; atkMult *= 1.1; }
 
     let hp = Math.floor(enemy.hp * hpMult); 
     let atk = Math.floor(enemy.atk * atkMult);
     let xp = Math.max(1, Math.floor((danger || 1) * (isBoss ? 5 : isElite ? 2 : 1)));
-	
-	
-	let finalDodge = Math.max(0, Math.min(60, baseDodge));
 
     G.activeSkillCD = 0;
-    
-    // 初始化 Combat 物件，包含技能列表
+    G.playerDefCD = 0;
+
+    // 4. ★★★ 完整初始化 (防止 renderCombat 報錯) ★★★
     G.combat = { 
         n: enemy.n, 
         maxHp: hp, 
         hp: hp, 
         atk: atk, 
-	dodge: finalDodge,
+        dodge: finalDodge,
         isBoss: isBoss, 
         isElite: isElite,
-        sks: enemy.sks || [], // 載入技能
+        sks: enemy.sks || [],
         turnCount: 0, 
+        
+        // 必須初始化的屬性
         buffs: {}, 
+        playerDebuffs: { stun:0, silence:0, blind:0 }, // 修正點：預先建立
+        enemyShield: 0,                                 // 修正點：預先建立
+        playerShield: 0,
+        
         enemySkillCD: 0, 
         xpVal: xp, 
         isStunned: false, 
-        playerShield: 0, 
         usedItem: false 
     };
 
-    if(!G.combat.sk) G.combat.sk = '普通攻擊'; // 用於UI顯示
-    G.playerDefCD = 0; 
+    if(!G.combat.sk) G.combat.sk = '普通攻擊'; 
+
+    log('遭遇', `遭遇敵人：${G.combat.n} (HP:${hp})`, 'c-loss');
+
+    // 5. 確保 UI 顯示
+    let eArea = document.getElementById('enemy-area');
+    if (eArea) eArea.style.display = 'block';
+
     renderCombat();
 }
-
 // ==================== 修正後的戰鬥渲染 (修復變數未定義錯誤) ====================
 // === 戰鬥視覺輔助函數 ===
 
@@ -1361,25 +1581,41 @@ function triggerShake() {
     }
 }
 
+// === 缺少的核心函數：傷害預估 ===
+function getDmgEst(type) {
+    let val = 0;
+    // 近戰傷害 = 近戰武器數值 + 力量(s)
+    if(type === 'melee') {
+        val = getEquipVal(G.eq.melee) + getStat('s');
+    } 
+    // 遠程傷害 = 遠程武器數值 + 敏捷(a)
+    else if(type === 'ranged') {
+        val = getEquipVal(G.eq.ranged) + getStat('a');
+    }
+    
+    // 確保不小於 1
+    return Math.max(1, Math.floor(val));
+}
+
 // ==================== 極度昇華版 renderCombat ====================
 function renderCombat() {
     let c = G.combat;
-    
-    // === 顯示並渲染敵人區域 (上方) ===
+    if (!c) return; // 防呆
+
+    // === 1. 渲染敵人區域 (上方) ===
     let eArea = document.getElementById('enemy-area');
     eArea.style.display = 'block';
 
-    // 計算敵人顯示數據
     let eDef = Math.floor(c.maxHp * 0.05);
     if(c.buffs.defDown) eDef = Math.floor(eDef * 0.5);
     if(c.buffs.defUp) eDef = Math.floor(eDef * 1.5);
     let eDefColor = c.buffs.defUp ? '#4f4' : (c.buffs.defDown ? '#f44' : '#ccc');
 
-    let eDodge = 5;
-    if(c.buffs.dodgeUp) eDodge += 40;
+    let eDodge = c.dodge || 0;
+    if(c.buffs.dodgeUp) eDodge += 30;
     if(c.buffs.accDown) eDodge += 25;
     if(c.isStunned || c.buffs.sleep) eDodge = 0;
-    let eDodgeColor = eDodge > 5 ? '#fa0' : '#ccc';
+    let eDodgeColor = eDodge > 10 ? '#fa0' : '#ccc';
 
     let eAtk = c.atk;
     let eAtkColor = c.buffs.atkUp ? '#f44' : (c.buffs.atkDown ? '#888' : '#ccc');
@@ -1409,28 +1645,19 @@ function renderCombat() {
     let hpPercent = Math.max(0, Math.min(100, (c.hp / c.maxHp) * 100));
     let avatar = getEnemyAvatar(c.n);
 
-    // ★★★ 渲染敵人面板 ★★★
     eArea.innerHTML = `
-    <div class="enemy-visual">
-        <div class="enemy-avatar">${avatar}</div>
-    </div>
-    
+    <div class="enemy-visual"><div class="enemy-avatar">${avatar}</div></div>
     <div class="enemy-hud">
         <div class="hud-row">
             <span style="font-size:1.2em; font-weight:bold; color:#f66; text-shadow:0 0 5px #500">${c.isBoss ? '👑 ' : ''}${c.n}</span>
             <span style="font-family:'Consolas'; color:#fff">${c.hp} <span style="color:#666">/ ${c.maxHp}</span></span>
         </div>
-        
-        <div class="hp-bar-container">
-            <div class="hp-bar-fill" style="width: ${hpPercent}%"></div>
-        </div>
-
+        <div class="hp-bar-container"><div class="hp-bar-fill" style="width: ${hpPercent}%"></div></div>
         <div class="stat-grid-compact" style="background:rgba(0,0,0,0.5); margin-top:5px;">
             <div>⚔️ <span style="color:${eAtkColor}">${eAtk}</span></div>
             <div>🛡️ <span style="color:${eDefColor}">${eDef}</span></div>
             <div>💨 <span style="color:${eDodgeColor}">${eDodge}%</span></div>
         </div>
-        
         <div class="buff-row">${enemyBuffs.length ? enemyBuffs.join('') : '<span style="color:#444;font-size:0.8em">無狀態</span>'}</div>
         ${skillHtml}
     </div>`;
@@ -1438,17 +1665,20 @@ function renderCombat() {
     // === 2. 渲染玩家與操作區域 (下方) ===
     let skillData = SKILLS[G.job.sk];
     if(!skillData) skillData = {n:'無技能', desc:'', cd:99};
-    let isSilenced = c.playerDebuffs && c.playerDebuffs.silence > 0;
+    
+    // 安全讀取 Debuffs
+    let safeDebuffs = c.playerDebuffs || {};
+    let isSilenced = safeDebuffs.silence > 0;
     
     let skillBtnText = `<div style="font-weight:bold">${skillData.n}</div>`;
-    if(isSilenced) skillBtnText += `<div style="font-size:0.75em;color:#d0f">⛔沉默(${c.playerDebuffs.silence})</div>`;
+    if(isSilenced) skillBtnText += `<div style="font-size:0.75em;color:#d0f">⛔沉默(${safeDebuffs.silence})</div>`;
     else if(G.activeSkillCD > 0) skillBtnText += `<div style="font-size:0.75em;color:#f44">CD:${G.activeSkillCD}</div>`;
     else skillBtnText += `<div style="font-size:0.75em;color:#4f4">就緒</div>`;
 
-    let pStun = (c.playerDebuffs && c.playerDebuffs.stun > 0);
-    let disableAll = pStun ? 'disabled style="filter:grayscale(100%); opacity:0.6"' : '';
+    let pStun = safeDebuffs.stun > 0;
+    
     let pStatus = [];
-    if(pStun) pStatus.push(`<span class="buff-badge" style="color:#fa0;border-color:#fa0">⚡暈眩(${c.playerDebuffs.stun})</span>`);
+    if(pStun) pStatus.push(`<span class="buff-badge" style="color:#fa0;border-color:#fa0">⚡暈眩(${safeDebuffs.stun})</span>`);
     if(c.playerShield > 0) pStatus.push(`<span class="buff-badge" style="color:#4f4;border-color:#4f4">🛡️盾${c.playerShield}</span>`);
 
     let statsBar = `<div style="background:#161616; padding:8px; border-radius:4px; border:1px solid #333; margin-bottom:10px;">
@@ -1462,68 +1692,69 @@ function renderCombat() {
         </div>
     </div>`;
 
-    let html = `
-        ${statsBar}
+    let actionButtonsHtml = '';
+
+    if (pStun) {
+        actionButtonsHtml = `
         <div class="combat-grid">
-            <button onclick="combatRound('melee')" ${disableAll}>⚔️ 近戰<br><small style="color:#888">預估: ${getDmgEst('melee')}</small></button>
-            <button onclick="combatRound('ranged')" ${disableAll} ${G.ammo>0?'':'disabled'}>🔫 射擊 (${G.ammo})<br><small style="color:#888">預估: ${getDmgEst('ranged')}</small></button>
-            <button title="${skillData.desc}" onclick="combatRound('skill')" ${disableAll} ${(G.activeSkillCD>0 || isSilenced)?'disabled':''}>${skillBtnText}</button>
-            <button onclick="combatRound('defend')" ${disableAll} ${G.playerDefCD>0?'disabled':''} style="border-color:#55aaff">🛡️ 防禦 (CD:${G.playerDefCD})</button>
-            <button class="combat-full-width" onclick="openCombatBag()" ${(c.usedItem || pStun)?'disabled style="opacity:0.5"':''}>🎒 戰鬥物品 (${G.bag.length})</button>
-            <button class="combat-full-width" onclick="combatRound('flee')" ${disableAll}>🏃 逃跑</button>
+            <button class="combat-full-width" onclick="combatRound('skip')" style="border-color:#fa0; color:#fa0; height:100px; font-size:1.2em;">
+                ⚡ 你被擊暈了！<br><span style="font-size:0.8em; color:#fff">(點擊跳過回合)</span>
+            </button>
         </div>`;
-        
-    document.getElementById('action-area').innerHTML = html;
-}
+    } else {
+        actionButtonsHtml = `
+        <div class="combat-grid">
+            <button onclick="combatRound('melee')">⚔️ 近戰<br><small style="color:#888">預估: ${getDmgEst('melee')}</small></button>
+            <button onclick="combatRound('ranged')" ${G.ammo>0?'':'disabled'}>🔫 射擊 (${G.ammo})<br><small style="color:#888">預估: ${getDmgEst('ranged')}</small></button>
+            <button title="${skillData.desc}" onclick="combatRound('skill')" ${(G.activeSkillCD>0 || isSilenced)?'disabled':''}>${skillBtnText}</button>
+            <button onclick="combatRound('defend')" ${G.playerDefCD>0?'disabled':''} style="border-color:#55aaff">🛡️ 防禦 (CD:${G.playerDefCD})</button>
+            <button class="combat-full-width" onclick="openCombatBag()" ${c.usedItem?'disabled style="opacity:0.5"':''}>🎒 戰鬥物品 (${G.bag.length})</button>
+            <button class="combat-full-width" onclick="combatRound('flee')">🏃 逃跑</button>
+        </div>`;
+    }
 
-// 修改 getDmgEst (傷害預估)
-function getDmgEst(type) { 
-    return (type==='melee' ? getEquipVal(G.eq.melee) : getEquipVal(G.eq.ranged)) + (type==='melee' ? getStat('s') : getStat('a')); 
+    document.getElementById('action-area').innerHTML = statsBar + actionButtonsHtml;
 }
-
 // ==================== 戰鬥邏輯核心 (完整修復版) ====================
-// ==================== 戰鬥邏輯核心 (修復版) ====================
+
+// ==================== 完整修復版 combatRound (包含所有技能) ====================
 function combatRound(act) {
-    let c = G.combat; 
-    let logMsg = []; 
-    c.turnCount++; 
+    let c = G.combat;
+    let logMsg = [];
+    c.turnCount++;
     G.isDefending = false;
 
-    // 初始化狀態結構
-    if(!c.playerDebuffs) c.playerDebuffs = { stun:0, silence:0, blind:0 };
-    if(!c.enemyShield) c.enemyShield = 0;
-    if(!c.buffs) c.buffs = {};
+    // === 1. 狀態與冷卻更新 ===
+    if (c.buffs.rageShieldTimer > 0) {
+        c.buffs.rageShieldTimer--;
+        if (c.buffs.rageShieldTimer === 0 && c.playerShield > 0) {
+            c.playerShield = 0;
+            logMsg.push(`<span style="color:#aaa">狂暴的血氣消散了</span>`);
+        }
+    }
 
-    // --- 1. 玩家回合前狀態結算 ---
+    // 初始化防呆
+    if (!c.playerDebuffs) c.playerDebuffs = { stun: 0, silence: 0, blind: 0 };
+    if (!c.enemyShield) c.enemyShield = 0;
+    if (!c.buffs) c.buffs = {};
+
     if (act !== 'skill' && G.activeSkillCD > 0) G.activeSkillCD--;
     if (act !== 'defend' && G.playerDefCD > 0) G.playerDefCD--;
     if (c.playerDebuffs.silence > 0) c.playerDebuffs.silence--;
 
-    // 檢查暈眩
+    // 暈眩檢查
     if (c.playerDebuffs.stun > 0) {
         logMsg.push(`<span style="color:#fa0">你處於暈眩狀態，無法行動！(剩餘 ${c.playerDebuffs.stun} 回合)</span>`);
         c.playerDebuffs.stun--;
-        // 暈眩時直接跳到敵人行動
         processEnemyTurn(c, logMsg);
         return;
     }
 
-    // --- 2. 玩家行動結算 ---
-    let dmg = 0;
-
-    // 被動：黑客紅藍藥丸
-    if(G.job.passive === 'pills') {
-        if(Math.random() < 0.33) {
-            if(Math.random() < 0.5) {
-                let h = Math.floor(G.maxHp * 0.1); G.hp = Math.max(1, G.hp - h);
-                logMsg.push(`<span style="color:#f44">吞下Red Pill: HP -${h}</span>`);
-            } else {
-                let h = Math.floor((G.maxHp - G.hp) * 0.5); G.hp += h;
-                logMsg.push(`<span style="color:#4f4">吞下Blue Pill: HP +${h}</span>`);
-            }
-        }
+    // === 2. 被動效果 ===
+    if (G.job.passive === 'pills' && Math.random() < 0.33) {
+        if (Math.random() < 0.5) { G.hp = Math.max(1, G.hp - Math.floor(G.maxHp * 0.1)); logMsg.push("<span style='color:#f44'>Red Pill: 扣血</span>"); }
+        else { G.hp += Math.floor((G.maxHp - G.hp) * 0.5); logMsg.push("<span style='color:#4f4'>Blue Pill: 回血</span>"); }
     }
-    // 被動：Popper舞風切換
     if(G.job.passive === 'dance_style') {
         let styles = ['Slim','Greenteck','Hoan','Hozin','Pete'];
         c.buffs.dance = styles[Math.floor(Math.random()*5)];
@@ -1542,67 +1773,89 @@ function combatRound(act) {
         let pct = 0.005 + Math.random()*0.045;
         let h = Math.floor(G.maxHp * pct); G.hp = Math.min(G.maxHp, G.hp+h);
     }
-    // 被動：南丁格爾
     if(G.job.passive === 'nurse_buff') {
         let h = Math.floor(G.maxHp * 0.02); G.hp = Math.min(G.maxHp, G.hp+h);
     }
-    // 被動：諾貝爾獎
     if(G.job.passive === 'random_buff') {
         let stat = ['s','a','i','w','luck'][Math.floor(Math.random()*5)];
         G.stats[stat] = Math.floor((G.stats[stat]||0) * 1.1);
         logMsg.push(`諾貝爾獎: ${STAT_MAP[stat]}提升`);
     }
 
-    // 處理近戰/遠程攻擊
-    if(act === 'melee' || act === 'ranged') {
-        if(act==='ranged') G.ammo--;
+    // === 3. 玩家行動結算 ===
+    let dmg = 0;
+
+    if (act === 'melee' || act === 'ranged') {
+        if (act === 'ranged') G.ammo--;
 
         // 機械師召喚
         let engSummon = '';
-        if(G.job.passive === 'eng_summon' && (act === 'melee' || act === 'ranged') && Math.random() < 0.1) {
+        if(G.job.passive === 'eng_summon' && Math.random() < 0.1) {
             let r = Math.random();
             if(r < 0.33) engSummon = 'dog';
             else if(r < 0.66) engSummon = 'doraemon';
             else engSummon = 'terminator';
         }
-     
         // 玻璃大炮
         if(G.job.passive === 'weapon_break' && Math.random() < 0.015) {
             logMsg.push("糟糕！武器承受不住你的中二之力而損壞了！"); 
         }
 
-        dmg = getDmgEst(act);
-        let derived = calcDerivedStats();
+        // --- ★★★ Lil Kid 連擊邏輯 ★★★ ---
+        let baseDmg = getDmgEst(act);
+        let hits = 1; 
+        
+        if (c.buffs.kidClones > 0) {
+            for(let k=0; k<4; k++) {
+                if(Math.random() < 0.3) hits++;
+            }
+            c.buffs.kidClones--; 
+        }
+        
+        dmg = baseDmg * hits;
+        // ---------------------------------
 
-        // 暴擊
-        if((Math.random()*100 < derived.crit) || (c.buffs.sleep > 0)) { 
-            dmg = Math.floor(dmg * (derived.critDmg/100)); 
-            logMsg.push("暴擊！");
+        // 暴擊判定
+        let derived = calcDerivedStats();
+        let isCrit = false;
+        if ((Math.random() * 100 < derived.crit) || (c.buffs.sleep > 0)) {
+            dmg = Math.floor(dmg * (derived.critDmg / 100));
+            isCrit = true;
+            logMsg.push("🔥 暴擊！");
         }
 
-        // 技能加成結算
-        if(c.buffs.hedgeTurns > 0) { dmg += c.buffs.hedgeAtk; logMsg.push(`(對沖基金 +${c.buffs.hedgeAtk})`); c.buffs.hedgeTurns--; }
-        if(c.buffs.chuunibyou > 0) { dmg += c.buffs.chuuniVal; c.buffs.chuunibyou--; logMsg.push("中二修正拳！"); }
-        if(c.buffs.redbull > 0) { dmg = Math.floor(dmg * 1.3); c.buffs.redbull--; logMsg.push("Red Bull翼擊！"); }
+        // 技能/被動加成
+        if (c.buffs.hedgeTurns > 0) { dmg += c.buffs.hedgeAtk; logMsg.push(`(對沖基金 +${c.buffs.hedgeAtk})`); c.buffs.hedgeTurns--; }
+        if (c.buffs.chuunibyou > 0) { dmg += c.buffs.chuuniVal; c.buffs.chuunibyou--; logMsg.push("中二修正拳！"); }
+        if (c.buffs.redbull > 0) { dmg = Math.floor(dmg * 1.3); c.buffs.redbull--; logMsg.push("Red Bull翼擊！"); }
+        if (c.buffs.drift) { dmg = Math.floor(dmg * 1.2); c.buffs.drift--; }
         
         // 舞者加成
         if(c.buffs.dance === 'Greenteck') dmg = Math.floor(dmg * 1.2);
         if(c.buffs.dance === 'Pete') dmg = Math.floor(dmg * 1.1);
         if(c.buffs.dance === 'Hoan') dmg = Math.floor(dmg * 1.5);
-
+        
+        if (G.job.passive === 'truck_hit' && Math.random() < 0.05) { dmg = Math.floor(dmg * 1.5); logMsg.push("CyberTruck撞擊！"); }
+        if (G.job.passive === 'dev_buff' && Math.random() < 0.15) { dmg += (getStat('s')*0.5); logMsg.push("工人助陣！"); }
+        
+        // 連擊 (Wing Chun)
+        let multiHit = (G.job.passive === 'wing_chun' && Math.random() < 0.1) ? 2 : 1;
+        dmg *= multiHit; 
+        if(multiHit>1) logMsg.push(`${multiHit}連擊！`);
+        
         // 華爾街吸血
         if(G.job.passive === 'olive_eat') {
             if(Math.random() < 0.5) { 
-                let heal = Math.floor((G.maxHp - G.hp) * 0.1); // 先計算回血量
+                let heal = Math.floor((G.maxHp - G.hp) * 0.1); 
                 G.hp += heal; 
-                logMsg.push(`量化寬鬆!恢復 +${heal}血`); // 顯示數值
+                logMsg.push(`量化寬鬆!恢復 +${heal}血`); 
             } else { 
                 let suck = Math.floor(dmg * 0.3); 
                 G.hp = Math.min(G.maxHp, G.hp + suck); 
                 logMsg.push(`高額手續費! 抽取+${suck}血`); 
             }
         }
-
+        
         // 機械師效果
         if(engSummon === 'dog') { c.buffs.bleed = 99; logMsg.push("機械狗咬傷流血！"); } 
         else if(engSummon === 'doraemon') {
@@ -1612,259 +1865,296 @@ function combatRound(act) {
             else { G.hp = Math.min(G.maxHp, G.hp + Math.floor(G.maxHp*0.2)); logMsg.push("吃豆沙包！"); }
         }
 
-        // 被動特效
-        if(G.job.passive === 'counter_block' && Math.random() < 0.15) { c.buffs.tempBlock = 0.8; logMsg.push("格擋反擊架勢！"); }
-        if(G.job.passive === 'flash_blind' && Math.random() < 0.1) { c.buffs.blind = 1; logMsg.push("致盲！"); }
-        if(G.job.passive === 'sleep_hit' && Math.random() < 0.1) { c.buffs.sleep = 1; logMsg.push("敵人睡著了！"); }
-        if(G.job.passive === 'bleed_hit' && Math.random() < 0.2) { c.buffs.bleed = 2; logMsg.push("流血！"); }
-        if(G.job.passive === 'truck_hit' && Math.random() < 0.05) { dmg += (dmg*1.5); logMsg.push("CyberTruck撞擊！"); }
-        if(G.job.passive === 'dev_buff' && Math.random() < 0.15) { dmg += (getStat('s')*0.5); logMsg.push("工人助陣！"); }
-        if(G.job.passive === 'burn_proc' && Math.random() < 0.2) { c.buffs.burn = 2; logMsg.push("燃燒！"); }
+        // 命中判定
+        let enemyDodge = c.dodge || 0;
+        if (c.buffs.dodgeUp) enemyDodge += 30;
+        if (c.buffs.accDown) enemyDodge += 25;
+        if (c.buffs.sleep || c.isStunned || c.buffs.root) enemyDodge = 0;
 
-        // 連擊
-        let multiHit = (G.job.passive === 'wing_chun' && Math.random() < 0.1) ? 2 : 1;
-        if(c.buffs.drift) {
-            if(Math.random() < 0.33) { multiHit++; if(Math.random()<0.33) multiHit++; }
-            c.buffs.drift--;
-        }
-        dmg *= multiHit; 
-        if(multiHit>1) logMsg.push(`${multiHit}連擊！`);
+        let myAcc = getStat('a') * 0.5;
+        let finalDodge = Math.max(0, enemyDodge - myAcc);
+        let ignoreDodge = (c.buffs.ignoreDef > 0) || (c.buffs.matrix > 0);
 
-        // 敵人閃避/減傷計算
-        let enemyBaseDodge = c.dodge || 0; // 獲取敵人基礎閃避
-
-        if(c.buffs.dodgeUp > 0) enemyBaseDodge += 30; // 閃避Buff
-        if(c.buffs.accDown) enemyBaseDodge += 25;     // 玩家被致盲/命中下降 -> 等同敵人閃避提升
-        if(c.buffs.sleep || c.isStunned || c.buffs.root) enemyBaseDodge = 0; // 被控時無法閃避
-
-        let ignoreDodge = (c.buffs.ignoreDef > 0); // 必中技能
-        
-        if(!ignoreDodge && Math.random() * 100 < enemyBaseDodge) {
+        if (!ignoreDodge && Math.random() * 100 < finalDodge) {
             dmg = 0;
-            logMsg.push(`<span style="color:#aaa">攻擊被 ${c.n} 靈活地閃避了！(${Math.floor(enemyBaseDodge)}%機率)</span>`);
+            logMsg.push(`<span style="color:#aaa">攻擊被閃避 (${Math.floor(finalDodge)}%)</span>`);
         } else {
-            let dmgReduction = 0;
-            if(c.buffs.defUp > 0) { dmgReduction = 0.5; logMsg.push("敵方防禦力提升中，傷害減半"); }
-            dmg = Math.floor(dmg * (1 - dmgReduction));
-
-            let enemyDef = Math.floor(c.maxHp * 0.05); 
-            if(c.buffs.defDown) enemyDef = Math.floor(enemyDef * 0.5); 
-            if(c.buffs.ignoreDef) enemyDef = 0;
-            
-            dmg = Math.max(1, dmg - enemyDef);
-
-            // 護盾抵扣
-            if(c.enemyShield > 0) {
-                if(c.enemyShield >= dmg) {
-                    c.enemyShield -= dmg; logMsg.push(`敵方護盾抵擋了所有傷害`); dmg = 0;
-                } else {
-                    dmg -= c.enemyShield; logMsg.push(`擊破敵方護盾！`); c.enemyShield = 0;
-                }
+            // 命中成功
+            if (hits > 1) {
+                logMsg.push(`<strong style="color:#4f4">🥷 忍刀連斬 (x${hits} 連擊)！</strong>`);
             }
+            
+            // 觸發命中特效
+            if (G.job.passive === 'flash_blind' && Math.random() < 0.1) { c.buffs.blind = 1; logMsg.push("致盲！"); }
+            if (G.job.passive === 'sleep_hit' && Math.random() < 0.1) { c.buffs.sleep = 1; logMsg.push("催眠！"); }
+            if (G.job.passive === 'bleed_hit' && Math.random() < 0.2) { c.buffs.bleed = 2; logMsg.push("流血！"); }
+            if(G.job.passive === 'counter_block' && Math.random() < 0.15) { c.buffs.tempBlock = 0.8; logMsg.push("格擋反擊架勢！"); }
+            if(G.job.passive === 'burn_proc' && Math.random() < 0.2) { c.buffs.burn = 2; logMsg.push("燃燒！"); }
         }
 
-    } else if (act === 'defend') { 
-        G.isDefending = true; G.playerDefCD=3; logMsg.push("防禦姿態"); 
-
-    } else if (act === 'skill') { 
-        G.activeSkillCD = SKILLS[G.job.sk].cd; 
+    } else if (act === 'skill') {
+        G.activeSkillCD = SKILLS[G.job.sk].cd;
         let sk = G.job.sk;
-        let s = getStat('s'), baseDmg = (getDmgEst('melee') + getDmgEst('ranged')) / 2;
+        let s = getStat('s'), i = getStat('i'), w = getStat('w'), luck = getStat('luck');
+        let dScale = 1 + (G.diff - 1) * 0.25;
+        let sScale = 1 + (G.diff - 1) * 0.4;
+        let baseAvg = (getDmgEst('melee') + getDmgEst('ranged')) / 2;
         let derived = calcDerivedStats();
-        
-        // 技能列表
-        if(sk === 'chuunibyou') {
-            c.buffs.chuunibyou = 3; c.buffs.chuuniVal = Math.floor(baseDmg * Math.random()); dmg = baseDmg + c.buffs.chuuniVal;
+
+        // --- 完整技能列表 ---
+        if (sk === 'kid_squad') {
+            c.buffs.kidClones = 5; 
+            logMsg.push("🥷 忍法：影分身之術！(接下來 5 回合攻擊機率連擊)");
+            dmg = 0;
+        } 
+        else if(sk === 'chuunibyou') {
+            c.buffs.chuunibyou = 3; 
+            c.buffs.chuuniVal = Math.floor(baseAvg * Math.random() * dScale); 
+            dmg = (baseAvg * dScale) + c.buffs.chuuniVal;
             logMsg.push(`中二病發作！攻擊力波動上升！`);
-        } else if(sk === 'snipe') {
-            dmg = baseDmg * 2; if(Math.random()*100 < derived.crit) dmg *= (derived.critDmg/100);
-            logMsg.push("狙擊模式：鎖定目標！");
-        } else if(sk === 'first_aid') {
-            let h = Math.floor((G.maxHp - G.hp) * 0.5); G.hp += h;
+        } 
+        else if (sk === 'snipe') {
+            dmg = baseAvg * 2 * dScale;
+            if(Math.random()*100 < derived.crit) dmg *= (derived.critDmg/100);
+            logMsg.push("🎯 狙擊鎖定！");
+        } 
+        else if(sk === 'first_aid') {
+            let pct = 0.5 * sScale; 
+            let h = Math.floor((G.maxHp - G.hp) * pct); 
+            G.hp += h;
             logMsg.push(`急救處理：恢復了 ${h} 點生命`);
-        } else if(sk === 'fate_throw') {
-            let mult = 0.5 + Math.random() * 3.5; dmg = baseDmg * mult; if(Math.random()*100 < derived.crit) dmg *= (derived.critDmg/100);
+        } 
+        else if(sk === 'fate_throw') {
+            let mult = 0.5 + Math.random() * 3.5; 
+            dmg = baseAvg * mult * dScale; 
+            if(Math.random()*100 < derived.crit) dmg *= (derived.critDmg/100);
             logMsg.push("命運一擲！");
-        } else if(sk === 'weakness_scan') {
+        } 
+        else if(sk === 'weakness_scan') {
             c.buffs.defDown = 3;
             logMsg.push("弱點分析：敵人防禦力大幅下降 (3回合)");
-        } else if(sk === 'risk_manage') {
-            c.playerShield = G.maxHp;
-            logMsg.push(`風險管理：獲得鉅額護盾 (${G.maxHp})`);
-        } else if(sk === 'kungfu_panda') {
-            let r = Math.random();
-            if(r < 0.01 && !c.isBoss) { dmg = c.hp; logMsg.push("【無錫碎骨指】直接秒殺！"); }
-            else if(r < 0.5) { let h = Math.floor((G.maxHp-G.hp)*0.5); G.hp += h; logMsg.push(`【吞併Diliveroo】恢復了 ${h} 點生命`); }
-            else { c.isStunned = true; c.buffs.stun = 2; dmg = baseDmg * 1.5; logMsg.push("【衝擊Keeta】造成傷害並暈眩敵人！"); }
-        } else if(sk === 'flash_bang') {
+        } 
+        else if(sk === 'risk_manage') {
+            c.playerShield = Math.floor(G.maxHp * sScale);
+            logMsg.push(`風險管理：獲得鉅額護盾 (${c.playerShield})`);
+        } 
+        else if (sk === 'kungfu_panda') {
+             let r = Math.random();
+             if(r < 0.01 && !c.isBoss) { dmg = c.hp; logMsg.push("【無錫碎骨指】直接秒殺！"); }
+             else if(r < 0.5) { 
+                 let h = Math.floor((G.maxHp-G.hp)*0.5 * sScale); 
+                 G.hp += h; logMsg.push(`【吞併Diliveroo】恢復了 ${h} 點生命`); 
+             }
+             else { 
+                 c.isStunned = true; c.buffs.stun = 2; 
+                 dmg = baseAvg * 1.5 * dScale; 
+                 logMsg.push("【衝擊Keeta】造成傷害並暈眩敵人！"); 
+             }
+        }
+        else if(sk === 'flash_bang') {
             c.buffs.blind = 3; c.buffs.atkDown = 3;
-            logMsg.push("投擲閃光彈！敵人致盲並攻擊下降");
-        } else if(sk === 'rage') {
-            G.hp = Math.floor(G.hp * 0.8); dmg = s * 5; 
-            logMsg.push("狂暴：犧牲生命換取毀滅一擊！");
-        } else if(sk === 'god_hand') {
+            logMsg.push("投擲閃光彈！敵人降攻致盲");
+        } 
+        else if(sk === 'rage') {
+            let hpCost = Math.floor(G.hp * 0.2);
+            G.hp = Math.max(1, G.hp - hpCost);
+            dmg = s * 8 * dScale; 
+            let strBonus = s * (G.diff === 3 ? 12 : 6); 
+            let shieldGain = Math.floor((hpCost * (G.diff === 3 ? 3 : 2)) + strBonus);
+            c.playerShield = shieldGain;
+            c.buffs.rageShieldTimer = 2;
+            logMsg.push(`狂暴：犧牲血量，爆發 <strong style="color:#4f4">${shieldGain} 肌肉護盾</strong> (2回合)！`);
+        } 
+        else if(sk === 'god_hand') {
             c.buffs.godBlock = 1; 
             logMsg.push("神之一手：絕對防禦架勢！(下回合必反擊)");
-        } else if(sk === 'tree_strike') {
-            dmg = baseDmg * 1.5; c.buffs.root = 2; c.isStunned = true;
+        } 
+        else if(sk === 'tree_strike') {
+            dmg = baseAvg * 1.5 * dScale; 
+            c.buffs.root = 2; c.isStunned = true;
             logMsg.push("鏟泥種樹：敵人被樹根纏繞定身！");
-        } else if(sk === 'risk_hedge') {
-            c.buffs.hedge = 1; c.buffs.hedgeAtk = c.atk; c.buffs.hedgeTurns = 2;
-            logMsg.push(`風險對沖: <strong>免疫本回合傷害</strong>，並將敵攻轉化為下回合加成`);
-        } else if(sk === 'dictionary') {
+        } 
+        else if(sk === 'risk_hedge') {
+            c.buffs.hedge = 1; 
+            c.buffs.hedgeAtk = Math.floor(c.atk * dScale); 
+            c.buffs.hedgeTurns = 2;
+            logMsg.push(`風險對沖: 免疫傷害，轉化敵攻為加成`);
+        } 
+        else if(sk === 'dictionary') {
             let r = Math.random();
-            if(r < 0.25) { dmg = baseDmg * 5; logMsg.push("【習相遠】：習帝之擊！造成五倍傷害！"); } 
-            else if(r < 0.5) { c.playerShield = getStat('w') * 5; logMsg.push(`【性相近】：獲得聖賢護盾 (${c.playerShield})`); } 
+            if(r < 0.25) { dmg = baseAvg * 5 * dScale; logMsg.push("【習相遠】：習帝之擊！"); } 
+            else if(r < 0.5) { 
+                c.playerShield = Math.floor(w * 5 * sScale); 
+                logMsg.push(`【性相近】：獲得聖賢護盾 (${c.playerShield})`); 
+            } 
             else if(r < 0.75) { c.buffs.atkDown = 3; logMsg.push("【人之初】：嘮叨說教，敵人攻擊力下降"); } 
             else { c.buffs.atkDown=2; c.buffs.defDown=2; logMsg.push("【性本善】：精神污染，敵人攻防同時下降"); }
-        } else if(sk === 'dlss') {
+        } 
+        else if(sk === 'dlss') {
             c.buffs.dlss = 3;
             logMsg.push("DLSS 開啟：敏捷與閃避大幅提升！");
-        } else if(sk === 'bullseye') {
-            dmg = baseDmg; c.buffs.ignoreDef = 1; if(Math.random()*100 < derived.crit) dmg *= (derived.critDmg/100);
+        } 
+        else if(sk === 'bullseye') {
+            dmg = baseAvg * 1 * dScale; 
+            c.buffs.ignoreDef = 1; 
+            if(Math.random()*100 < derived.crit) dmg *= (derived.critDmg/100);
             logMsg.push("紅心鎖定：無視防禦的一擊！");
-        } else if(sk === 'creatine') {
+        } 
+        else if(sk === 'creatine') {
             c.buffs.allUp = 2;
             logMsg.push("喝下肌酸：全屬性爆發提升！");
-        } else if(sk === 'hypnosis') {
+        } 
+        else if(sk === 'hypnosis') {
             c.buffs.sleep = 2;
             logMsg.push("催眠術：敵人陷入睡眠 (下次受傷必定暴擊)");
-        } else if(sk === 'shave') {
+        } 
+        else if(sk === 'shave') {
             c.buffs.atkDown = 3; c.buffs.defDown = 3; c.buffs.accDown = 3;
             logMsg.push("剃光頭：敵人全能力大幅削弱！");
-        } else if(sk === 'tesla_coil') {
-            dmg = baseDmg * 2; c.buffs.defDown = (1 + Math.floor(Math.random()*3));
-            logMsg.push("特斯拉線圈：電擊並融化敵人護甲");
-        } else if(sk === 'pi_strike') {
-            dmg = (1 + Math.random()*200) * 3.14159;
-            logMsg.push("祖沖之之怒：計算出圓周率傷害！");
-        } else if(sk === 'kid_squad') {
-            c.cloneTurns = 5; c.buffs.kidClones = true;
-            logMsg.push("忍刀五人眾：召喚分身助陣 (增加攻擊與閃避)");
-       } else if(sk === 'money_rain') {
-            // 1. 重新平衡消耗 (上調正常難度的消耗，避免濫用)
-            // 正常: $20 (原本$10太便宜，現在需要權衡)
-            // 困難: $40
-            // 噩夢: $60 (絕境手段)
-            let baseCost = 20;
-            if (G.diff === 2) baseCost = 40;
-            if (G.diff === 3) baseCost = 60;
-
+        } 
+        else if (sk === 'tesla_coil') {
+            dmg = baseAvg * 2 * dScale;
+            c.buffs.defDown = (1 + Math.floor(Math.random()*3));
+            logMsg.push("⚡ 特斯拉線圈：電擊破甲");
+        } 
+        else if (sk === 'pi_strike') {
+             let baseRnd = (1 + Math.random()*200) * 3.14159;
+             dmg = (baseRnd + (i * 10)) * dScale;
+             logMsg.push("🔢 圓周率打擊！");
+        } 
+        else if(sk === 'money_rain') {
+            let baseCost = (G.diff === 3) ? 60 : ((G.diff === 2) ? 40 : 20);
             if (G.money >= baseCost) {
                 G.money -= baseCost;
-
-                // 2. 重新平衡傷害公式
-                // 舊版: Luck * 50 (太強，隨便都破千)
-                // 新版: Luck * 15 + Int * 5 (基礎約 250-400，強力但合理)
-                
-                let luck = getStat('luck');
-                let baseDmg = (luck * 15) + (getStat('i') * 5);
-                
-                // 3. 難度補償 (付費越多，基礎傷害倍率越高)
-                // 噩夢模式付出了 $60 (半條命)，傷害必須爆炸
-                let diffMult = 1.0;
-                if (G.diff === 2) diffMult = 1.5;
-                if (G.diff === 3) diffMult = 2.5;
-                
-                // 4. 莊家賭運 (Jackpot 系統)
-                // 幸運越高，越容易觸發 200% 傷害
-                // 20 Luck = 40% 機率
-                let isJackpot = Math.random() < (luck * 0.02); 
-                let jackpotMult = isJackpot ? 2.0 : 1.0;
-
-                dmg = Math.floor(baseDmg * diffMult * jackpotMult);
-
-                let prefix = isJackpot ? "🎰 <span style='color:#ffd700'>JACKPOT!</span> " : "";
-                logMsg.push(`大撒幣：${prefix}揮霍 <span style="color:#ffd700">$${baseCost}</span> 砸人！`);
+                let rawDmg = (luck * 15) + (i * 5);
+                dmg = Math.floor(rawDmg * dScale * (G.diff===3 ? 1.5 : 1)); 
+                c.buffs.ignoreDef = 1;
+                logMsg.push(`大撒幣：有錢使得鬼推磨 <span style="color:#ffd700">$${baseCost}</span> ！`);
             } else {
-                // 沒錢時的懲罰
-                dmg = 5 + getStat('s'); 
-                logMsg.push("大撒幣：摸遍口袋發現沒錢了... 只能丟出幾枚銅板 ");
+                dmg = (5 + s) * dScale;
+                logMsg.push("大撒幣：沒錢了... ");
             }
-        } else if(sk === 'waterfall') {
-            G.hp -= Math.floor(G.hp * 0.1); dmg = (1.1 + Math.random()*3.9) * baseDmg;
+        } 
+        else if(sk === 'waterfall') {
+            G.hp -= Math.floor(G.hp * 0.1); 
+            dmg = (1.1 + Math.random()*3.9) * baseAvg * dScale;
             logMsg.push("Kim Setup：高風險高回報一擊！");
-        } else if(sk === 'drift') {
+        } 
+        else if(sk === 'drift') {
             c.buffs.drift = 5;
             logMsg.push("東京漂移：進入連擊狀態！");
-        } else if(sk === 'matrix') {
+        } 
+        else if(sk === 'matrix') {
             c.buffs.matrix = 3;
             logMsg.push("Matrix：看穿代碼，閃避極限提升！");
-        } else if(sk === 'one_cue') {
-            if(!c.isBoss && Math.random() < 0.15) { dmg = c.hp; logMsg.push("一Q清檯：直接將敵人打入黑洞！"); }
-            else { dmg = baseDmg * 2; logMsg.push("一Q清檯：強力撞擊！"); }
-        } else if(sk === 'holy_chant') {
-            if(c.isBoss) { dmg = 0; logMsg.push("聖靈吟唱：Boss 對百分比傷害免疫..."); } 
-            else { let pct = 0.2 + Math.random()*0.4; dmg = Math.floor(c.hp * pct); G.hp -= Math.floor(dmg * 0.3); logMsg.push(`聖靈吟唱：獻祭自身，削減敵人 ${Math.floor(pct*100)}% 生命`); }
-        } else if(sk === 'talisman') {
-            c.isStunned = true; c.buffs.zombieCountdown = 3; logMsg.push("急急如律令！貼符定身，<strong style='color:#fa0'>3回合後</strong>轉化敵人");
-        } else if(sk === 'welding') {
+        } 
+        else if(sk === 'one_cue') {
+            if(c.isBoss) {
+                dmg = Math.floor(c.hp * 0.15); 
+                logMsg.push("庖丁解牛!");
+            } else if (Math.random() < 0.15) { 
+                dmg = c.hp; logMsg.push("一Q清檯！"); 
+            } else { 
+                dmg = baseAvg * 2 * dScale; logMsg.push("大力出奇跡！"); 
+            }
+        } 
+        else if(sk === 'holy_chant') {
+            if(c.isBoss) { dmg = 0; logMsg.push("Boss 免疫此效果..."); }
+            else {
+                let cost = 15;
+                if (G.san > cost) {
+                    G.san -= cost;
+                    let pct = 0.2 + Math.random()*0.4; 
+                    dmg = Math.floor(c.hp * pct); 
+                    c.playerShield = Math.floor(dmg * 0.5 * sScale);
+                    logMsg.push(`聖靈吟唱：消耗 SAN 值，削減敵人血量並獲得護盾`);
+                } else {
+                    logMsg.push("聖靈吟唱：信仰不足 (SAN過低)...");
+                }
+            }
+        } 
+        else if(sk === 'talisman') {
+            if (c.buffs.zombie) {
+                dmg = baseAvg * 2 * dScale;
+                c.isStunned = true; c.buffs.stun = 1;
+                logMsg.push(`天師鎮屍！重創僵屍並定身！`);
+            } else {
+                c.isStunned = true; c.buffs.zombieCountdown = 3; 
+                logMsg.push("急急如律令！貼符定身，<strong style='color:#fa0'>3回合後</strong>轉化敵人");
+            }
+        } 
+        else if(sk === 'welding') {
             c.buffs.accDown = 5; c.buffs.defDown = 5;
             logMsg.push("全身焊接：封死敵人關節，命中防禦下降");
-        } else if(sk === 'raptor') {
-            dmg = baseDmg * 2; if(Math.random() < 0.05) { dmg = c.hp; logMsg.push("速龍突襲：當場逮捕！"); }
-            else logMsg.push("速龍突襲：強力撕咬！");
-        } else if(sk === 'redbull') {
+        } 
+        else if(sk === 'raptor') {
+            if (c.isBoss) {
+                dmg = baseAvg * 2 * dScale;
+                c.buffs.atkDown = 3; 
+                logMsg.push("速龍突襲：火力壓制！(Boss 攻擊下降)");
+            } else {
+                dmg = baseAvg * 2 * dScale; 
+                if(Math.random() < 0.05) { dmg = c.hp; logMsg.push("速龍突襲：當場逮捕！"); }
+                else logMsg.push("速龍突襲：強力撕咬！");
+            }
+        } 
+        else if(sk === 'redbull') {
             c.buffs.redbull = 3;
             logMsg.push("Red Bull：送你一對翼！閃避與攻擊提升");
-        } else if(sk === 'high_pitch') {
-            G.hp -= Math.floor(G.hp * 0.1); c.buffs.atkDown = 2; c.buffs.accDown = 2;
-            logMsg.push("飆高音：震破耳膜！敵人攻擊命中下降");
-        }
-
-    } else if (act === 'flee') { 
-        let fleeChance = 0.4 + (getStat('a') * 0.02);
-        if(G.job.passive === 'super_run') fleeChance = 0.75;
-        if(Math.random() < fleeChance) { campPhase(); return; } 
-        logMsg.push("逃跑失敗"); 
-    }
-
-    // --- 4. 傷害結算 (玩家打敵人) ---
-    if(dmg > 0) {
-        // Lil Kid 分身
-        if(c.cloneTurns > 0 && c.buffs.kidClones) {
-            let clones = 4; let hit = 0;
-            for(let k=0; k<clones; k++) if(Math.random() < 0.3) hit++;
-            dmg += hit * getDmgEst('ranged');
-            logMsg.push(`分身命中 ${hit} 次`);
-            c.cloneTurns--;
-        }
-        
-        // 敵人護盾與防禦結算
-        let enemyDef = Math.floor(c.maxHp * 0.05); 
-        if(c.buffs.defDown) enemyDef = Math.floor(enemyDef * 0.5); 
-        if(c.buffs.ignoreDef) enemyDef = 0;
-
-        // 優先扣除敵人護盾
-        if(c.enemyShield > 0) {
-            if(c.enemyShield >= dmg) { 
-                c.enemyShield -= dmg; dmg = 0; logMsg.push("技能被護盾完全抵擋"); 
-            } else { 
-                dmg -= c.enemyShield; c.enemyShield = 0; logMsg.push("技能擊穿了護盾！");
+        } 
+        else if(sk === 'high_pitch') {
+            if (G.food > 10) {
+                G.food -= 10;
+                c.buffs.atkDown = 2; c.buffs.accDown = 2;
+                logMsg.push("飆高音：消耗體力震破耳膜！敵人攻命下降");
+            } else {
+                logMsg.push("沒力氣唱歌了...");
             }
         }
 
-        let finalDmg = Math.max(1, Math.floor(dmg - enemyDef));
-        c.hp -= finalDmg; 
-        logMsg.push(`造成 ${finalDmg} 技能傷害`);
-	// ★★★ 昇華點：使用描述生成器 ★★★
-        let isCrit = (dmg > getDmgEst(act) * 1.2); // 簡單判定是否暴擊
-        let flavor = getCombatFlavor('你', c.n, act, finalDmg, isCrit, false);
-        
-        let styleClass = isCrit ? 'log-combat-c' : 'log-combat-d';
-        logMsg.push(`<div class="log-combat-h">${flavor}</div>`);
-        
-        // 設置全局變量供動畫使用
-        G.lastDmg = finalDmg;
-        G.lastCrit = isCrit;
-        triggerShake(); // 觸發震動動畫
-
+    } else if (act === 'defend') {
+        G.isDefending = true; G.playerDefCD = 3; logMsg.push("🛡️ 防禦姿態");
+    } else if (act === 'flee') {
+        if (Math.random() < 0.5) { campPhase(); return; }
+        logMsg.push("🏃 逃跑失敗");
     }
 
-    // 處理敵人回合邏輯
+    // === 4. 最終傷害扣除 ===
+    if (dmg > 0) {
+        // 扣除防禦
+        let eDef = Math.floor(c.maxHp * 0.05);
+        if (c.buffs.defDown) eDef = Math.floor(eDef * 0.5);
+        if (c.buffs.ignoreDef) eDef = 0;
+
+        let realDmg = Math.max(1, Math.floor(dmg - eDef));
+
+        // 護盾抵扣
+        if (c.enemyShield > 0) {
+            if (c.enemyShield >= realDmg) {
+                c.enemyShield -= realDmg; realDmg = 0; logMsg.push("🛡️ 傷害被護盾抵擋");
+            } else {
+                realDmg -= c.enemyShield; c.enemyShield = 0; logMsg.push("⚡ 擊破護盾！");
+            }
+        }
+
+        // 扣血
+        if (realDmg > 0) {
+            c.hp -= realDmg;
+            logMsg.push(`💥 造成 <strong>${realDmg}</strong> 點傷害`);
+            
+            // 戰鬥文字特效
+            let isCrit = (dmg > getDmgEst(act) * 1.2); 
+            let flavor = getCombatFlavor('你', c.n, act, realDmg, isCrit, false);
+            logMsg.push(`<div class="log-combat-h">${flavor}</div>`);
+
+            G.lastDmg = realDmg;
+            triggerShake();
+        }
+    }
+
+    // === 5. 敵人回合 ===
     processEnemyTurn(c, logMsg);
 }
-
 // 提取敵人回合邏輯，避免函數過長和嵌套錯誤
 function processEnemyTurn(c, logMsg) {
     // --- 5. 敵人狀態結算 (DoT) ---
@@ -2008,6 +2298,11 @@ function processEnemyTurn(c, logMsg) {
                 if(G.job.passive === 'block_chance' && Math.random()<0.2) { eDmg = Math.floor(eDmg*0.5); logMsg.push("鐵壁格擋"); }
                 if(c.buffs.dance === 'Hozin' && Math.random()<0.2) { eDmg=0; logMsg.push("Hozin格擋"); }
 
+		if (G.job.trait === '抑鬱霸王' && G.flags.depression) {
+                    take = Math.floor(take * 0.5);
+                    logMsg.push("(太抑鬱了, 我變得連敵人的傷害也不再在乎.)");
+                }
+
                 let def = G.eq.body.val + G.eq.head.val;
                 if (c.buffs.playerDefDown) def = 0;
                 let take = Math.max(1, Math.floor((eDmg - def) * (1 - derived.dmgRed/100)));
@@ -2026,7 +2321,7 @@ function processEnemyTurn(c, logMsg) {
                         if(G.job.passive === 'dmg_reduce' && Math.random()<0.5) take = Math.floor(take * 0.7);
 
                         G.hp -= take; 
-                        logMsg.push(`受到 ${Math.floor(take)} 傷害`);
+                        logMsg.push(`玩家受到 ${Math.floor(take)} 傷害`);
                         
                         // 反傷
                         let reflect = 0;
@@ -2216,7 +2511,7 @@ function openModal(title, content, btns) {
     document.getElementById('m-btns').innerHTML = btns;
     document.getElementById('screen-modal').style.display = 'flex';
 }
-function closeModal() { document.getElementById('screen-modal').style.display = 'none'; showGameContainer();}
+function closeModal() { document.getElementById('screen-modal').style.display = 'none'; }
 function log(t, m, c='') {
     let d = document.getElementById('log-area');
     d.innerHTML += `<div class="log-entry"><span style="color:#666">[D${G.day}]</span> [${t}] <span class="${c}">${m}</span></div>`;
@@ -2587,7 +2882,6 @@ function rewindTime(daysToRewind, hpCost, statCost) {
     G.playerDefCD = 0;
     
     closeModal();
-    showGameContainer();
     document.getElementById('enemy-area').style.display = 'none';
     document.getElementById('enemy-area').innerHTML = '';
 
@@ -2645,11 +2939,11 @@ function showItemDetail(type) {
 function showLootModal(newItem, type, onCloseCallback) {
     G.tempLoot = { item: newItem, type: type, cb: onCloseCallback };
     
-	// 計算回收價格
+    // 計算回收價格
     let val = getItemValue(newItem);
     let sellPrice = Math.max(1, Math.floor(val * 0.3));
 
-	 // ★★★ 新增：生成戰鬥日誌區塊 ★★★
+    // 戰鬥日誌顯示區
     let logHtml = '';
     if (G.lastCombatLog && G.lastCombatLog.length > 0) {
         let logs = G.lastCombatLog.map(l => `<div style="margin-bottom:3px;">${l}</div>`).join('');
@@ -2659,14 +2953,11 @@ function showLootModal(newItem, type, onCloseCallback) {
             ${logs}
             <div style="color:#ffd700; font-weight:bold; margin-top:8px; text-align:center;">🏆 戰鬥勝利！</div>
         </div>`;
-        
-        // 清除記錄，避免搜刮非戰鬥物品時也顯示
         G.lastCombatLog = null; 
     }
-    // ===================================
 
-     // === 修改處：消耗品介面增加「直接使用」 ===
-    if (type === 'med' || type === 'food' || type === 'water') {
+    // === 判斷是否為消耗品或投擲物 ===
+    if (type === 'med' || type === 'food' || type === 'water' || type === 'throwable') {
         let bagCap = getBagCapacity();
         let isFull = G.bag.length >= bagCap;
         let valInfo = '';
@@ -2678,8 +2969,10 @@ function showLootModal(newItem, type, onCloseCallback) {
             valInfo = parts.join(' ');
         } else if (type === 'food') {
             valInfo = `飽食度 +${newItem.val}`;
-        } else {
+        } else if (type === 'water') {
             valInfo = `水分 +${newItem.val}`;
+        } else if (type === 'throwable') {
+            valInfo = `造成傷害 ${newItem.val}`;
         }
         
         let html = `${logHtml} 
@@ -2692,14 +2985,18 @@ function showLootModal(newItem, type, onCloseCallback) {
             <div style="font-size:0.9em">背包容量: ${G.bag.length} / ${bagCap}</div>
         </div>`;
         
-        let btns = `<button onclick="useLootItemDirectly()" style="border-color:#4f4; color:#4f4">✨ 直接使用</button>
+        // 投擲物不能直接使用，其他消耗品可以
+        let canUse = (type !== 'throwable');
+        let useBtn = canUse ? `<button onclick="useLootItemDirectly()" style="border-color:#4f4; color:#4f4">✨ 直接使用</button>` : '';
+
+        let btns = `${useBtn}
                     <button onclick="takeItemToBag()">放入背包</button>
                     <button onclick="recycleLoot()" style="border-color:#ffd700; color:#ffd700">回收 (+$${sellPrice})</button>
                     <button onclick="discardLoot()">丟棄</button>`;
         
         if(isFull) {
             html += `<div style="color:#f44; margin-top:5px">背包已滿！放入需整理背包。</div>`;
-            btns = `<button onclick="useLootItemDirectly()" style="border-color:#4f4; color:#4f4">✨ 直接使用</button>
+            btns = `${useBtn}
                     <button onclick="showBagSwapUI()">整理背包</button>
                     <button onclick="recycleLoot()" style="border-color:#ffd700; color:#ffd700">回收 (+$${sellPrice})</button>
                     <button onclick="discardLoot()">丟棄</button>`;
@@ -2709,7 +3006,7 @@ function showLootModal(newItem, type, onCloseCallback) {
         return;
     }
 
-    // --- 以下為原本的裝備比對邏輯 (保持不變) ---
+    // === 裝備類比對邏輯 ===
     let curr = G.eq[type];
     let lbl = getItemValueLabel(type);
     let ammoText = newItem.ammo ? `<br><span style="color:#aaa;font-size:0.8em">附帶彈藥: ${newItem.ammo}</span>` : '';
@@ -2720,7 +3017,6 @@ function showLootModal(newItem, type, onCloseCallback) {
     
     let jobTag = newItem.isJobNative ? `<br><span style="color:var(--skill-color);font-size:0.8em">★ 職業專屬 (+10% 屬性)</span>` : "";
 
-    // === 修復點：補上了 let html = ` ===
     let html = `${logHtml}
     <div class="comp-container">
         <div class="comp-box">
@@ -2740,7 +3036,6 @@ function showLootModal(newItem, type, onCloseCallback) {
         </div>
     </div>`;
 
-    // 裝備按鈕邏輯不用變，因為 equipLoot 會處理自動交換/賣出
     let btns = `<button onclick="equipLoot()">裝備並替換</button>
                 <button onclick="takeItemToBag()">放入背包</button>
                 <button onclick="recycleLoot()" style="border-color:#ffd700; color:#ffd700">回收 (+$${sellPrice})</button>
@@ -2755,7 +3050,6 @@ function showLootModal(newItem, type, onCloseCallback) {
 
     openModal("獲得戰利品", html, btns);
 }
-
 function useLootItemDirectly() {
     if (!G.tempLoot || !G.tempLoot.item) return;
     let item = G.tempLoot.item;
@@ -3111,6 +3405,8 @@ const globalFunctions = {
     campPhase,
     nextStoryStep,
     openCampBag,
+    renderJobs,
+    renderJobIntro,
 };
 
 Object.assign(window, globalFunctions);
