@@ -782,7 +782,17 @@ function renderStoryModal(showingResult = false) {
         <strong>${storyState.data.title} (${storyState.step+1}/${maxSteps})</strong><br><br>
         ${storyState.step===0 ? storyState.data.intro + '<br><br>' : ''}
         ${stepData.q}
-    </div>`;
+        </div>
+        <div>
+            <span class="stat-lbl">屬性</span>
+            <div id="stat-bar" style="grid-template-columns: repeat(5, 1fr);">
+                <div class="stat-box"><span class="stat-lbl">💪 力量</span><span class="stat-val" >${getStat('s')}</span></div>
+                <div class="stat-box"><span class="stat-lbl">🦵 敏捷</span><span class="stat-val" >${getStat('a')}</span></div>
+                <div class="stat-box"><span class="stat-lbl">🧠 智力</span><span class="stat-val" >${getStat('i')}</span></div>
+                <div class="stat-box"><span class="stat-lbl">🛡️ 意志</span><span class="stat-val" >${getStat('w')}</span></div>
+                <div class="stat-box"><span class="stat-lbl">🍀 幸運</span><span class="stat-val" >${getStat('luck')}</span></div>
+            </div>
+        </div>`;
     
    let shuffledOpts = [...stepData.opts].sort(() => 0.5 - Math.random());
     let btns = '';
@@ -832,7 +842,7 @@ function storyChoose(type, statKey, isBoss, bossName, isQuest) {
         scoreChange = 2;
         let reward = getEventReward();
         resultText = `<span class="c-epic">大成功！</span><br>${reward}<br>(全屬性微升)`;
-        let s=['s','a','i','w'][Math.floor(Math.random()*4)]; G.stats[s]++;
+        ['s','a','i','w'].forEach(s=>G.stats[s]++);
         gainXp(1); 
         G.money += 30;
         resultText += " (獲得 $30)";
@@ -1334,7 +1344,6 @@ function abandonQuest() {
 }
 
 // ==================== 戰鬥與物品 ====================
-// ==================== 戰鬥與物品 ====================
 // 在 game.js 中找到 triggerBossFight 函數並替換內容
 function triggerBossFight(name, isQuest=false) { 
     // 難度倍率
@@ -1511,7 +1520,7 @@ function getEnemyAvatar(name) {
 }
 
 // 2. 戰鬥描述生成器 (Flavor Text)
-function getCombatFlavor(attacker, target, action, dmg, isCrit, isKill) {
+function getCombatFlavor(attacker, target, dmg, isCrit, isKill) {
     // 閃避描述
     if (dmg === 0) {
         const dodgeTexts = [
@@ -1562,11 +1571,22 @@ function triggerShake() {
         // 飄字效果
         let damage = G.lastDmg || 0;
         if (damage > 0) {
+            // Get enemy position
+             const rect = el.getBoundingClientRect();
             let popup = document.createElement('div');
             popup.className = 'dmg-popup';
             popup.innerHTML = `-${damage}`;
             if(G.lastCrit) popup.style.color = '#ff0';
-            el.appendChild(popup);
+
+            // Position at enemy center using fixed positioning
+            popup.style.position = 'fixed';
+            popup.style.left = (rect.left + rect.width / 2) + 'px';
+            popup.style.top = (rect.top + rect.height / 2) + 'px';
+            popup.style.transform = 'translate(-50%, -50%)';
+            popup.style.zIndex = '10000';
+            
+            // // Add to BODY not enemy-area
+            document.body.appendChild(popup);
             setTimeout(() => popup.remove(), 1000);
         }
     }
@@ -1611,6 +1631,7 @@ function renderCombat() {
     let eAtk = c.atk;
     let eAtkColor = c.buffs.atkUp ? '#f44' : (c.buffs.atkDown ? '#888' : '#ccc');
 
+    // 敵人 Buff 列表 (視覺化)
     let enemyBuffs = [];
     if(c.enemyShield > 0) enemyBuffs.push(`<span class="buff-badge" style="color:#fa0;border-color:#fa0">🛡️ ${c.enemyShield}</span>`);
     if(c.buffs.defUp) enemyBuffs.push(`<span class="buff-badge" style="color:#aaa">🛡️UP</span>`);
@@ -1621,6 +1642,7 @@ function renderCombat() {
     if(c.buffs.sleep) enemyBuffs.push(`<span class="buff-badge" style="color:#88f;border-color:#88f">💤睡眠</span>`);
     if(c.buffs.defDown) enemyBuffs.push(`<span class="buff-badge" style="color:#f44">💔破甲</span>`);
     
+    // 敵人技能顯示
     let skillHtml = '';
     if(c.sks && c.sks.length > 0) {
         let skillsList = c.sks.map(s => `<span class="skill-tag" style="font-size:0.75em">${s.n}</span>`).join('');
@@ -1703,6 +1725,7 @@ function renderCombat() {
     }
 
     document.getElementById('action-area').innerHTML = statsBar + actionButtonsHtml;
+    updateUI();
 }
 // ==================== 戰鬥邏輯核心 (完整修復版) ====================
 
@@ -1749,6 +1772,7 @@ function combatRound(act) {
         c.buffs.dance = styles[Math.floor(Math.random()*5)];
         logMsg.push(`切換舞風: ${c.buffs.dance}`);
     }
+    // 被動：道士
     if(G.job.passive === 'taoist_buff') {
         if(Math.random()<0.5) {
             let h = Math.floor((G.maxHp - G.hp)*0.05); G.hp+=h; logMsg.push("南部毛家: 回血");
@@ -1756,6 +1780,7 @@ function combatRound(act) {
             c.buffs.taoistAtk = (c.buffs.taoistAtk || 0) + 0.02; logMsg.push("北部馬家: 攻+2%");
         }
     }
+    // 被動：米芝蓮回血
     if(G.job.passive === 'chef_regen') {
         let pct = 0.005 + Math.random()*0.045;
         let h = Math.floor(G.maxHp * pct); G.hp = Math.min(G.maxHp, G.hp+h);
@@ -1810,6 +1835,7 @@ function combatRound(act) {
             isCrit = true;
             logMsg.push("🔥 暴擊！");
         }
+        G.lastCrit = isCrit;
 
         // 技能/被動加成
         if (c.buffs.hedgeTurns > 0) { dmg += c.buffs.hedgeAtk; logMsg.push(`(對沖基金 +${c.buffs.hedgeAtk})`); c.buffs.hedgeTurns--; }
@@ -2134,7 +2160,7 @@ function combatRound(act) {
             let flavor = getCombatFlavor('你', c.n, act, realDmg, isCrit, false);
             logMsg.push(`<div class="log-combat-h">${flavor}</div>`);
 
-            G.lastDmg = realDmg;
+            G.lastDmg = realDmg;            
             triggerShake();
         }
     }
@@ -2285,7 +2311,7 @@ function processEnemyTurn(c, logMsg) {
                 if(G.job.passive === 'block_chance' && Math.random()<0.2) { eDmg = Math.floor(eDmg*0.5); logMsg.push("鐵壁格擋"); }
                 if(c.buffs.dance === 'Hozin' && Math.random()<0.2) { eDmg=0; logMsg.push("Hozin格擋"); }
 
-		if (G.job.trait === '抑鬱霸王' && G.flags.depression) {
+                if (G.job.trait === '抑鬱霸王' && G.flags.depression) {
                     take = Math.floor(take * 0.5);
                     logMsg.push("(太抑鬱了, 我變得連敵人的傷害也不再在乎.)");
                 }
@@ -2338,9 +2364,9 @@ function processEnemyTurn(c, logMsg) {
                     }
                 } 
             } else if (isDodged) {
-        let flavor = getCombatFlavor('你', c.n, act, 0, false, false);
-        logMsg.push(`<div class="log-combat-h">${flavor}</div>`);
-    }
+                let flavor = getCombatFlavor('你', c.n, 0, false, false);
+                logMsg.push(`<div class="log-combat-h">${flavor}</div>`);
+            }
         }
     }
     checkCombatEnd(c, logMsg);
@@ -3151,9 +3177,8 @@ function getItemValue(item) {
 function openShop() {
     // 每日首次打開判定黑市 (2%)
     if (G.shop.lastDay !== G.day) {
-        G.shop.lastDay = G.day;
         // 每週自動刷新商品 (或者第一天)
-        if (G.day % 7 === 0 || G.shop.items.length === 0) {
+        if (Math.floor(G.day / 7) != Math.floor(G.shop.lastDay / 7) || G.shop.items.length === 0) {
             refreshShopItems(false); // 每週刷新重置為普通商店
         }
         
@@ -3164,6 +3189,7 @@ function openShop() {
         }
     }
     renderShopModal();
+    G.shop.lastDay = G.day;
 }
 
 function activateBlackMarket() {
@@ -3355,10 +3381,20 @@ function collapseEquip(){
     }
 }
 
+function debugCheat(){
+    G.money += 99999;
+    G.food = 99999;
+    G.water = 99999;
+    G.maxHp += 99999;
+    G.hp = G.maxHp;
+    G.san = 100;
+    updateUI();
+    log('系統', '作弊成功！獲得 $99999，99999食物, 99999水源, 99999 HP, 並恢復狀態。', 'c-epic');
+}
+
 // Export all functions to window at once
 const globalFunctions = {
     startGame,
-	
     closeModal,
     manualRefreshShop,
     closePlotDialog,
@@ -3392,8 +3428,11 @@ const globalFunctions = {
     renderCampActions,
     campPhase,
     nextStoryStep,
-renderJobs,
+    openCampBag,
+    renderJobs,
     renderJobIntro,
+    debugCheat,
+    triggerShake,
 };
 
 Object.assign(window, globalFunctions);
