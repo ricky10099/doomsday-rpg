@@ -1355,62 +1355,148 @@ function abandonQuest() {
 }
 
 // ==================== 戰鬥與物品 ====================
-// 在 game.js 中找到 triggerBossFight 函數並替換內容
-// 在 game.js 中找到 triggerBossFight 函數並替換內容
 function triggerBossFight(name, isQuest=false) { 
-    // 難度倍率
-    let diffMult = 1 + (G.diff - 1) * 0.4; 
-    let hp, atk, bossDodge;
+    // 使用動態計算，類型為 boss 或 final_boss
+    let typeKey = (name === "最終屍王") ? 'final_boss' : 'boss';
+    let stats = getDynamicEnemyStats(typeKey);
+
+    let hp = stats.hp;
+    let atk = stats.atk;
+    let bossDodge = (getCurrentTier() - 1) * 10 + 5; 
 
     if (name === "最終屍王") {
-        hp = 8000; 
-        atk = 250;
         bossDodge = 50; 
-    } else {
-        if (G.day <= 29) {
-            hp = 500 + (G.day * 15); 
-            atk = 20 + (G.day * 0.6); 
-            bossDodge = 5; 
-        } else if (G.day <= 59) {
-            hp = 1200 + (G.day * 25); 
-            atk = 40 + (G.day * 0.8); 
-            bossDodge = 15; 
-        } else if (G.day <= 89) {
-            hp = 2500 + (G.day * 35); 
-            atk = 70 + (G.day * 1.0);
-            bossDodge = 25; 
-        } else if (G.day <= 119) {
-            hp = 5000 + (G.day * 50); 
-            atk = 110 + (G.day * 1.2); 
-            bossDodge = 35; 
-        } else {
-            hp = 8000 + (G.day * 80); 
-            atk = 160 + (G.day * 1.5);
-            bossDodge = 45; 
-        }
+        // 最終Boss給予額外的壓力係數 (確保真的很難)
+        hp = Math.floor(hp * 1.2);
+        atk = Math.floor(atk * 1.1);
     }
-
-    hp = Math.floor(hp * diffMult);
-    atk = Math.floor(atk * diffMult);
 
     G.activeSkillCD = 0; 
     G.playerDefCD = 0;
 
     G.combat = { 
-        n:name, maxHp:hp, hp:hp, atk:atk, 
-        sk:'終極毀滅', isBoss:true, isQuest:isQuest, 
-        turnCount:0, buffs:{}, enemySkillCD:0, 
-        cloneTurns:0, xpVal: 50 + Math.floor(G.day/2), 
+        n:name, 
+        maxHp:hp, 
+        hp:hp, 
+        atk:atk, 
+        sk:'終極毀滅', 
+        isBoss:true, 
+        isQuest:isQuest, 
+        turnCount:0, 
+        buffs:{}, 
+        enemySkillCD:0, 
+        cloneTurns:0, 
+        xpVal: 50 + Math.floor(G.day/2), 
         isStunned: false, 
-        playerShield: 0, usedItem: false,
+        playerShield: 0, 
+        usedItem: false,
         dodge: bossDodge,
-        // Boss 也可以有預設詞綴抗性
-        defP: 0.1 
+        defP: 0.15 // Boss 自帶 15% 減傷
     };
     
     log('遭遇', `強敵出現：${name} (HP:${hp}, ATK:${atk})`, 'c-loss');
+    
+    // 顯示敵人區域
+    let eArea = document.getElementById('enemy-area');
+    if (eArea) eArea.style.display = 'block';
+    
     renderCombat();
 }
+
+// ==================== 全新動態難度平衡系統 ====================
+
+// 1. 計算玩家當前戰力與期望值
+function getPlayerCombatPower() {
+    // A. 計算玩家最佳輸出 (考慮暴擊期望值)
+    let s = getStat('s'), a = getStat('a');
+    let meleeRaw = getEquipVal(G.eq.melee) + s;
+    let rangedRaw = getEquipVal(G.eq.ranged) + a;
+    let baseAtk = Math.max(meleeRaw, rangedRaw);
+    
+    // 暴擊期望修正：Atk * (1 + (暴率% * (暴傷倍率-1)))
+    // 假設暴傷為 150% (1.5) -> 多出來的 0.5
+    let derived = calcDerivedStats();
+    let critChance = Math.min(100, derived.crit) / 100;
+    let expAtk = baseAtk * (1 + (critChance * 0.5));
+
+    // B. 計算玩家防禦與減傷
+    let def = getEquipVal(G.eq.head) + getEquipVal(G.eq.body);
+    // 獲取減傷百分比 (0.0 ~ 0.8)
+    let reducPct = Math.min(80, derived.dmgRed) / 100; 
+
+    return { 
+        atk: Math.max(5, Math.floor(expAtk)), 
+        def: def, 
+        hp: G.maxHp, 
+        reduc: reducPct 
+    };
+}
+
+// 2. 核心：根據類型生成動態數值
+function getDynamicEnemyStats(type) {
+    let p = getPlayerCombatPower();
+    let diff = G.diff; // 1=Normal, 2=Hard, 3=Nightmare
+
+    // --- 設定戰鬥節奏目標 (回合數) ---
+    // TTK_Player: 玩家殺死怪需要幾回合
+    // TTK_Enemy:  怪殺死玩家需要幾回合
+    let target = { playerTurns: 3, enemyTurns: 12 }; // 預設普通怪
+
+    if (type === 'elite') {
+        target.playerTurns = 6;
+        target.enemyTurns = 8;
+    } else if (type === 'boss') {
+        target.playerTurns = 12;
+        target.enemyTurns = 5; // Boss 5回合就能殺死玩家，迫使玩家回血/控場
+    } else if (type === 'final_boss') {
+        target.playerTurns = 18;
+        target.enemyTurns = 4; // 最終Boss極限壓制
+    }
+
+    // --- 難度修正係數 ---
+    let hpMult = 1.0;
+    let atkMult = 1.0;
+
+    if (diff === 2) { // 困難
+        hpMult = 1.2;
+        atkMult = 1.15;
+    } else if (diff === 3) { // 噩夢
+        hpMult = 1.5;
+        atkMult = 1.3;
+    }
+
+    // --- A. 計算敵人 HP ---
+    // EnemyHP = 玩家每回合傷害 * 目標回合 * 難度血量倍率
+    let eHP = Math.floor(p.atk * target.playerTurns * hpMult);
+
+    // --- B. 計算敵人 ATK ---
+    // 邏輯：(EnemyAtk - PlayerDef) * (1 - Reduc) = (PlayerHP / EnemyTurns)
+    // 逆推：EnemyAtk = [ (PlayerHP / EnemyTurns) / (1 - Reduc) ] + PlayerDef
+    // 這樣保證怪物打在玩家身上的「淨傷害」，正好能在 EnemyTurns 回合殺死玩家
+    
+    let requiredNetDmg = p.hp / target.enemyTurns;
+    // 避免除以0
+    let effectiveReduc = Math.max(0.1, 1 - p.reduc); 
+    let rawDmgNeeded = requiredNetDmg / effectiveReduc;
+    
+    let eAtk = Math.floor((rawDmgNeeded + p.def) * atkMult);
+
+    // --- C. 天數保底 (防止脫裝備騙數值) ---
+    // 隨著天數增加，怪物的「最低消費」會提升
+    let dayScale = 1 + (G.day * 0.1); // 每10天 +100% 基礎
+    let minHP = 30 * dayScale;
+    let minAtk = 10 + (G.day * 0.5);
+
+    if (type === 'boss' || type === 'elite') { minHP *= 3; minAtk *= 1.5; }
+    if (type === 'final_boss') { minHP = 8000; minAtk = 200; } // 最終Boss硬性下限
+
+    eHP = Math.max(eHP, Math.floor(minHP));
+    eAtk = Math.max(eAtk, Math.floor(minAtk));
+
+    return { hp: eHP, atk: eAtk };
+}
+
+// ==================== 替換原有的 triggerCombat ====================
 
 function triggerCombat(enemyTemplate, danger) { 
     let locationName = window.currentLocName || "民居";
@@ -1419,7 +1505,7 @@ function triggerCombat(enemyTemplate, danger) {
     let isElite = false;
     let isBoss = false;
 
-    // 2. 敵人生成邏輯
+    // 1. 決定敵人模板 (名字與特性)
     if (enemyTemplate) {
         enemy = enemyTemplate;
     } else {
@@ -1429,6 +1515,7 @@ function triggerCombat(enemyTemplate, danger) {
         let spawnTier = tier;
         if(safeDanger >= 4 && Math.random() < 0.3) spawnTier = Math.min(5, tier + 1);
 
+        // 嘗試生成地點 Boss
         if (Math.random() < bossChance && LOCATION_BOSSES && LOCATION_BOSSES[locationName]) {
             let bosses = LOCATION_BOSSES[locationName];
             if (bosses) {
@@ -1437,6 +1524,7 @@ function triggerCombat(enemyTemplate, danger) {
             }
         } 
         
+        // 嘗試生成精英
         if (!enemy && Math.random() < eliteChance) {
             let pool = ELITE_ENEMIES[spawnTier];
             if (!pool || pool.length === 0) pool = ELITE_ENEMIES[1];
@@ -1446,56 +1534,48 @@ function triggerCombat(enemyTemplate, danger) {
             }
         } 
         
+        // 生成普通怪
         if (!enemy) {
             let pool = NORMAL_ENEMIES[spawnTier];
             if (!pool || pool.length === 0) pool = NORMAL_ENEMIES[1];
-            if (!pool || pool.length === 0) enemy = { n: "迷路的喪屍", hp: 30, atk: 5 };
+            if (!pool || pool.length === 0) enemy = { n: "迷路的喪屍", hp: 30, atk: 5 }; // Fallback
             else enemy = pool[Math.floor(Math.random() * pool.length)];
         }
     }
     
-    // 複製一份，避免修改原始 DB
+    // 複製模板
     enemy = JSON.parse(JSON.stringify(enemy));
 
-    // === 平衡核心：指數級數值成長 ===
-    // 讓後期敵人數值跟上玩家成長
-    let timeScale = 1 + (G.day / 20) + (Math.pow(G.day, 1.2) / 100);
-    let diffMult = 1 + (G.diff - 1) * 0.4; 
-
-    let hp = Math.floor(enemy.hp * timeScale * diffMult); 
-    let atk = Math.floor(enemy.atk * timeScale * diffMult);
-
-    if (isBoss) { 
-        hp = Math.floor(hp * 2.5); // Boss 血量大幅提升
-        atk = Math.floor(atk * 1.3); 
-    }
-    else if (isElite) { 
-        hp = Math.floor(hp * 1.5); 
-        atk = Math.floor(atk * 1.2); 
-    }
+    // 2. 應用動態數值平衡 (覆蓋原有的固定數值)
+    let typeKey = isBoss ? 'boss' : (isElite ? 'elite' : 'normal');
+    let stats = getDynamicEnemyStats(typeKey);
     
-    // === 新增：敵人詞綴生成 ===
+    // 危險度修正：高危區域稍微再強一點點 (5% per danger level)
+    let dangerMult = 1 + ((danger || 1) - 1) * 0.05;
+    
+    let hp = Math.floor(stats.hp * dangerMult);
+    let atk = Math.floor(stats.atk * dangerMult);
+
+    // 3. 詞綴生成 (保持不變)
     let prefixData = null;
-    let prefixChance = 0.1 + (G.day / 120); // 天數越久機率越高
+    let prefixChance = 0.1 + (G.day / 120); 
     if (isElite || isBoss) prefixChance += 0.3;
-    if (G.diff === 3) prefixChance += 0.2; // 噩夢模式詞綴更多
+    if (G.diff === 3) prefixChance += 0.2; 
     
     if (Math.random() < prefixChance) {
-        // 決定詞綴 Tier
         let pTier = tier;
         if (Math.random() < 0.2) pTier = Math.min(5, pTier + 1);
-        if (G.day <= 10) pTier = 1; // 前期保護
+        if (G.day <= 10) pTier = 1; 
 
         let pool = ENEMY_PREFIXES[pTier] || ENEMY_PREFIXES[1];
         if (pool) {
             prefixData = pool[Math.floor(Math.random() * pool.length)];
-
-            // 應用詞綴效果
             enemy.n = `${prefixData.n}${enemy.n}`;
+            
+            // 詞綴數值修正 (乘算)
             hp = Math.floor(hp * (prefixData.hp || 1));
             atk = Math.floor(atk * (prefixData.atk || 1));
             
-            // 處理額外屬性
             if(prefixData.dodge) enemy.dodge = (enemy.dodge || 0) + prefixData.dodge;
             if(prefixData.defP) enemy.defP = (enemy.defP || 0) + prefixData.defP;
             if(prefixData.crit) enemy.crit = (enemy.crit || 0) + prefixData.crit;
@@ -1503,10 +1583,10 @@ function triggerCombat(enemyTemplate, danger) {
         }
     }
 
-    // 3. 數值計算
+    // 4. 基礎閃避與經驗
     let baseDodge = (tier - 1) * 5;
     if (isBoss) baseDodge += 10; else if (isElite) baseDodge += 5;
-    if (enemy.dodge) baseDodge += enemy.dodge; // 加上詞綴閃避
+    if (enemy.dodge) baseDodge += enemy.dodge;
     let finalDodge = Math.max(0, Math.min(60, baseDodge));
 
     let xp = Math.max(1, Math.floor((danger || 1) * (isBoss ? 5 : isElite ? 2 : 1)));
@@ -1515,33 +1595,26 @@ function triggerCombat(enemyTemplate, danger) {
     G.activeSkillCD = 0;
     G.playerDefCD = 0;
 
-    // 4. 初始化 G.combat
+    // 5. 初始化 Combat 對象
     G.combat = { 
         n: enemy.n, 
         maxHp: hp, 
         hp: hp, 
         atk: atk, 
         dodge: finalDodge,
-        
-        // 新增屬性
         defP: enemy.defP || 0, 
         acc: enemy.acc || 0,   
         crit: enemy.crit || 0, 
-        
         isBoss: isBoss, 
         isElite: isElite,
         sks: enemy.sks || [],
-        
-        // 儲存詞綴特效
         prefixEff: prefixData ? prefixData.eff : null,
         prefixDesc: prefixData ? prefixData.desc : null,
-
         turnCount: 0, 
         buffs: {}, 
         playerDebuffs: { stun:0, silence:0, blind:0 }, 
         enemyShield: 0,                                 
         playerShield: 0,
-        
         enemySkillCD: 0, 
         xpVal: xp, 
         isStunned: false, 
@@ -1550,17 +1623,16 @@ function triggerCombat(enemyTemplate, danger) {
 
     if(!G.combat.sk) G.combat.sk = '普通攻擊'; 
 
-    // 提示前綴
-    let logStr = `遭遇敵人：${G.combat.n} (HP:${hp})`;
+    let logStr = `遭遇敵人：${G.combat.n} (HP:${hp}, ATK:${atk})`;
     if (prefixData) logStr += ` <span style="color:#f44">[${prefixData.desc}]</span>`;
     log('遭遇', logStr, 'c-loss');
 
-    // 5. 確保 UI 顯示
     let eArea = document.getElementById('enemy-area');
     if (eArea) eArea.style.display = 'block';
 
     renderCombat();
 }
+
 // ==================== 修正後的戰鬥渲染 (修復變數未定義錯誤) ====================
 // === 戰鬥視覺輔助函數 ===
 
@@ -3347,15 +3419,17 @@ function completeQuest() {
     
     // 如果獎勵是裝備類
     if(['acc','melee','ranged','med','head','body'].includes(q.reward.type)) {
-        let i = createItem(q.reward.type, BASE_DB[q.reward.type][0].n, q.reward.tier);
+        // ★★★ 修正：原本這裡使用了未定義的 BASE_DB，導致遊戲卡死 ★★★
+        // 改為使用 'random'，讓 createItem 自動生成該類型的隨機傳說物品
+        let i = createItem(q.reward.type, 'random', q.reward.tier);
+        
         i.val = Math.floor(i.val*1.5); 
         i.fullName = `傳說的 ${i.fullName}`;
         showLootModal(i, q.reward.type, campPhase);
     } 
     // 如果是其他類型 (如果有設定的話)
     else { 
-        // 修正：增加 closeModal()
-        openModal("任務完成", "獲得資源獎勵", `<button onclick="closeModal(); campPhase()">確認</button>`); 
+        openModal("任務完成", "獲得特殊獎勵!", `<button onclick="closeModal(); campPhase()">確認</button>`); 
     }
 }
 
