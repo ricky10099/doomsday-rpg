@@ -381,8 +381,6 @@ function showJobIntro() {
 
 function startJourney() {
     closeModal();
-    showGameContainer();
-
     G.day = 1; 
     log('系統', '旅程開始。', 'c-story');
     updateUI();
@@ -830,7 +828,6 @@ function getEventReward() {
 function storyChoose(type, statKey, isBoss, bossName, isQuest) {
     if (isBoss) {
         closeModal();
-        showGameContainer();
         let targetName = bossName || '區域領主';
         triggerBossFight(targetName, isQuest);
         return;
@@ -2876,7 +2873,7 @@ function openModal(title, content, btns) {
     document.getElementById('m-btns').innerHTML = btns;
     document.getElementById('screen-modal').style.display = 'flex';
 }
-function closeModal() { document.getElementById('screen-modal').style.display = 'none'; }
+function closeModal() { document.getElementById('screen-modal').style.display = 'none'; showGameContainer(); }
 function log(t, m, c='') {
     let d = document.getElementById('log-area');
     d.innerHTML += `<div class="log-entry"><span style="color:#666">[D${G.day}]</span> [${t}] <span class="${c}">${m}</span></div>`;
