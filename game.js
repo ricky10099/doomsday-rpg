@@ -1648,6 +1648,126 @@ function triggerCombat(enemyTemplate, danger) {
         turnCount: 0, 
         buffs: {}, 
         playerDebuffs: { stun:0, silence:0, blind:0 }, 
+function triggerCombat(enemyTemplate, danger) { 
+    let locationName = window.currentLocName || "民居";
+    let tier = getCurrentTier();
+    let enemy = null;
+    let isElite = false;
+    let isBoss = false;
+
+    // 1. 決定敵人模板
+    if (enemyTemplate) {
+        enemy = enemyTemplate;
+    } else {
+        let safeDanger = danger || 1;
+        let bossChance = 0.02 * safeDanger; 
+        let eliteChance = 0.1 * safeDanger; 
+        let spawnTier = tier;
+        if(safeDanger >= 4 && Math.random() < 0.3) spawnTier = Math.min(5, tier + 1);
+
+        if (Math.random() < bossChance && LOCATION_BOSSES && LOCATION_BOSSES[locationName]) {
+            let bosses = LOCATION_BOSSES[locationName];
+            if (bosses) {
+                enemy = bosses.find(b => b.t === spawnTier) || bosses[0];
+                if (enemy) isBoss = true;
+            }
+        } 
+        
+        if (!enemy && Math.random() < eliteChance) {
+            let pool = ELITE_ENEMIES[spawnTier];
+            if (!pool || pool.length === 0) pool = ELITE_ENEMIES[1];
+            if (pool && pool.length > 0) {
+                enemy = pool[Math.floor(Math.random() * pool.length)];
+                isElite = true;
+            }
+        } 
+        
+        if (!enemy) {
+            let pool = NORMAL_ENEMIES[spawnTier];
+            if (!pool || pool.length === 0) pool = NORMAL_ENEMIES[1];
+            if (!pool || pool.length === 0) enemy = { n: "迷路的喪屍", hp: 30, atk: 5 };
+            else enemy = pool[Math.floor(Math.random() * pool.length)];
+        }
+    }
+    
+    enemy = JSON.parse(JSON.stringify(enemy));
+    let originalName = enemy.n; 
+
+    // 2. 應用動態數值平衡
+    let typeKey = isBoss ? 'boss' : (isElite ? 'elite' : 'normal');
+    let stats = getDynamicEnemyStats(typeKey);
+    
+    // 危險度修正
+    let dangerMult = 1 + ((danger || 1) - 1) * 0.05;
+    
+    let hp = Math.floor(stats.hp * dangerMult);
+    let atk = Math.floor(stats.atk * dangerMult);
+
+    // 3. 詞綴生成
+    let prefixData = null;
+    let prefixChance = 0.1 + (G.day / 120); 
+    if (isElite || isBoss) prefixChance += 0.3;
+    if (G.diff === 3) prefixChance += 0.2; 
+    
+    if (Math.random() < prefixChance) {
+        let pTier = tier;
+        if (Math.random() < 0.2) pTier = Math.min(5, pTier + 1);
+        if (G.day <= 10) pTier = 1; 
+
+        let pool = ENEMY_PREFIXES[pTier] || ENEMY_PREFIXES[1];
+        if (pool) {
+            prefixData = pool[Math.floor(Math.random() * pool.length)];
+            enemy.n = `${prefixData.n}${enemy.n}`;
+            hp = Math.floor(hp * (prefixData.hp || 1));
+            atk = Math.floor(atk * (prefixData.atk || 1));
+            
+            if(prefixData.dodge) enemy.dodge = (enemy.dodge || 0) + prefixData.dodge;
+            if(prefixData.defP) enemy.defP = (enemy.defP || 0) + prefixData.defP;
+            if(prefixData.crit) enemy.crit = (enemy.crit || 0) + prefixData.crit;
+            if(prefixData.acc) enemy.acc = (enemy.acc || 0) + prefixData.acc;
+        }
+    }
+
+    // 4. 基礎閃避與經驗
+    let baseDodge = (tier - 1) * 5;
+    if (isBoss) baseDodge += 10; else if (isElite) baseDodge += 5;
+    if (enemy.dodge) baseDodge += enemy.dodge;
+    let finalDodge = Math.max(0, Math.min(60, baseDodge));
+
+    let xp = Math.max(1, Math.floor((danger || 1) * (isBoss ? 5 : isElite ? 2 : 1)));
+    if (prefixData) xp = Math.floor(xp * 1.5);
+
+    // ★★★ 計算固定防禦力 (新平衡) ★★★
+    let baseDefVal = (tier - 1) * 5 + (isBoss ? 5 : 0) + (isElite ? 2 : 0);
+    let finalDef = baseDefVal + Math.floor(Math.random() * 5);
+
+    G.activeSkillCD = 0;
+    G.playerDefCD = 0;
+
+    // 5. 初始化 Combat
+    G.combat = { 
+        n: enemy.n, 
+        baseName: originalName,
+        maxHp: hp, 
+        hp: hp, 
+        atk: atk, 
+        
+        // ★★★ 修正後的防禦屬性 ★★★
+        def: finalDef,          // 固定防禦
+        defP: enemy.defP || 0,  // 百分比減傷 (記得這裡要有逗號)
+        // ========================
+
+        dodge: finalDodge,
+        acc: enemy.acc || 0,   
+        crit: enemy.crit || 0, 
+        isBoss: isBoss, 
+        isElite: isElite,
+        sks: enemy.sks || [],
+        prefixEff: prefixData ? prefixData.eff : null,
+        prefixDesc: prefixData ? prefixData.desc : null,
+        turnCount: 0, 
+        buffs: {}, 
+        playerDebuffs: { stun:0, silence:0, blind:0 }, 
         enemyShield: 0,                                 
         playerShield: 0,
         enemySkillCD: 0, 
@@ -1655,6 +1775,18 @@ function triggerCombat(enemyTemplate, danger) {
         isStunned: false, 
         usedItem: false 
     };
+
+    // ★★★ 新增：Boss 裝備開場特效 ★★★
+    if (G.eq.head && G.eq.head.fx && G.eq.head.fx.t === 'fear_aura') {
+        if (Math.random() < 0.5) {
+            G.combat.buffs.atkDown = 3;
+            log('裝備', `🤡 小丑面具發動：${G.combat.n} 感到恐懼 (攻擊下降)`);
+        }
+    }
+    if (G.eq.acc && G.eq.acc.fx && G.eq.acc.fx.t === 'hypnosis') {
+        G.combat.buffs.sleep = 3;
+        log('裝備', `📻 洗腦廣播發動：${G.combat.n} 陷入深層睡眠`);
+    }
 
     if(!G.combat.sk) G.combat.sk = '普通攻擊'; 
 
