@@ -1467,6 +1467,7 @@ function abandonQuest() {
 
 // ==================== 戰鬥與物品 ====================
 function triggerBossFight(name, isQuest=false) { 
+function triggerBossFight(name, isQuest=false) { 
     // ★★★ 使用動態計算 (新代碼) ★★★
     let typeKey = (name === "最終屍王") ? 'final_boss' : 'boss';
     let stats = getDynamicEnemyStats(typeKey);
@@ -1477,7 +1478,7 @@ function triggerBossFight(name, isQuest=false) {
 
     // ★★★ 新增：Boss 開場威壓 ★★★
     let terror = 10; // 基礎扣 10
-    if (name === "最終屍王") terror = 20; // 屍王扣 20
+    if (name === "最終屍王") terror = ; // 屍王扣 20
     if (G.diff === 3) terror = Math.floor(terror * 1.5); // 噩夢加成
 
     // 意志力(Will) 可以抵消部分恐懼
@@ -1495,6 +1496,13 @@ function triggerBossFight(name, isQuest=false) {
         atk = Math.floor(atk * 1.1);
     }
 
+    // ★★★ 新增：Boss 固定防禦力 ★★★
+    let tier = getCurrentTier();
+    // Boss 基礎防禦較高：T1=10, T2=20...
+    let bossDef = (tier * 10) + (G.diff === 3 ? 10 : 0);
+    if (name === "最終屍王") bossDef = 50;
+    // ============================
+    
     G.activeSkillCD = 0; 
     G.playerDefCD = 0;
 
